@@ -37,9 +37,35 @@ On the RTX 4090 (`14.5 GiB` available for KV Cache), enabling `--kv-cache-dtype 
 ### 3. Why 90% of Production Prompts Accidentally Get a 0% Cache Hit Rate
 To trigger the 0% cache hit collapse in our baseline wave, I didn't disable `--enable-prefix-caching` on the server—I simply prepended `[Session-Nonce: <uuid>]` on Line 1 of the system prompt. Because vLLM hashes KV blocks sequentially in 16-token blocks, placing a dynamic `current_timestamp`, `request_id`, or `user_id` at the top of your system prompt invalidates 100% of downstream KV blocks. Always keep static DDLs and tool definitions strictly at token `0`, and append dynamic metadata at the end.
 
-Full benchmark harness (`asyncio` SSE profiler, workload generator, and plotting scripts) is open-sourced on GitHub (link in the first comment / below).
+Full benchmark harness (`asyncio` SSE profiler, workload generator, and plotting scripts) is open-sourced on GitHub:
+https://github.com/giordanoshai/vllm-prefix-cache-benchmark
 
 #AIInfrastructure #vLLM #LLMInference #GPU #RunPod #ForwardDeployedEngineer #PerformanceEngineering #Python
+
+---
+
+## Option 1B: LinkedIn Short & Punchy Version (Yimin Signature Style — 12 Lines)
+
+```text
+Most people think vLLM Prefix Caching only speeds up the first token (TTFT).
+I tested it on my 8GB RTX 3070 and 24GB RTX 4090 (1,800-token SQL schema prompt, up to 64 concurrent requests).
+
+When I broke the prefix cache by putting a dynamic session ID on Line 1:
+• TTFT P99 jumped 11.8x on the 4090 (151ms → 1,778ms) and 10.8x on the 3070 (322ms → 3,495ms).
+• Per-token streaming speed (TPOT P99) also slowed down up to 2.8x (17.2ms → 47.9ms) because uncached prefill chunks steal GPU cycles from active decode batches.
+
+I also tested --kv-cache-dtype fp8 on the 4090:
+• It doubled the KV cache pool from 543K to 1.08M tokens (265x concurrency @ 4k context).
+• But at c=64 (when VRAM was not full), FP16 KV cache was still 34% faster in throughput (4,614 vs 3,449 tok/s) due to FP8 dequantization overhead.
+
+Two lessons:
+1. Keep static schemas and tools at token 0; put timestamps and user IDs at the very end.
+2. Turn on FP8 KV cache when you are VRAM-bound, not by default.
+
+Code, raw JSON logs & plots: https://github.com/giordanoshai/vllm-prefix-cache-benchmark
+
+#vLLM #GPU #LLMInference #AIInfrastructure #Python
+```
 
 ---
 
@@ -87,4 +113,4 @@ At `c=64` with Prefix Caching hitting (`4,613.94 output tok/s` = `16.61M output 
 
 **Tweet 7/7 (Open Source Repo)**
 Full benchmark suite (`asyncio` SSE profiler that properly skips the initial empty `role: assistant` delta, workload generator, raw JSON telemetry, and plotting scripts) is open-sourced here:
-[GitHub Link] (@vllm_project)
+https://github.com/giordanoshai/vllm-prefix-cache-benchmark (@vllm_project)
