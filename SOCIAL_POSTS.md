@@ -117,7 +117,7 @@ https://github.com/giordanoshai/vllm-prefix-cache-benchmark (@vllm_project)
 
 ---
 
-## Option 3: Part 2 Follow-Up Post (Answering the Commenter: Speed vs. SQLite Execution Quality on Blackwell SM 12.0)
+## Option 3: Part 2 Follow-Up Post (Answering the L4 Commenter: Speed vs. SQLite Execution Quality on L4 & Blackwell)
 
 ### LinkedIn Post (Short & Punchy — Yimin Signature Style)
 *(Attach `charts/chart_accuracy_vs_quantization.png`)*
@@ -125,33 +125,58 @@ https://github.com/giordanoshai/vllm-prefix-cache-benchmark (@vllm_project)
 ```text
 Last week, someone asked in the comments: "You tested FP8 KV cache throughput—did you check output quality too? On L4, AWQ + FP8 KV dropped accuracy from 83.6% to 79.6%."
 
-So I built a 50-task Text-to-SQL benchmark backed by a real in-memory SQLite database and tested Qwen2.5-7B across 4 setups on an NVIDIA RTX PRO 6000 Blackwell (vLLM 0.34.0, c=16).
+So I built a 50-task Text-to-SQL benchmark (in-memory SQLite) and ran Qwen2.5-7B across 4 setups on BOTH an NVIDIA L4 (SM 8.9) and an RTX PRO 6000 Blackwell (SM 12.0), using vLLM 0.34.0 at c=16.
 
-What I found was way worse than a 4% drop:
-• BF16 + FP16 KV (baseline): 84% valid SQL, 62% exact execution match (1,049 tok/s).
-• AWQ 4-bit + FP16 KV: 80% valid SQL, 60% exact match (1,372 tok/s, +31% speed, 1.8x KV capacity).
-• AWQ 4-bit + FP8 KV: fastest throughput of all at 1,448 tok/s (717K KV tokens) — and 0% valid SQL.
+Accuracy reproduced identically on both GPUs:
+• BF16 + FP16 KV (baseline): 84% valid SQL | 62% exact match (L4: 206 tok/s, Blackwell: 1,049 tok/s).
+• AWQ 4-bit + FP16 KV: 80% valid SQL | 60% exact match (-2%). On L4, that gave +58% throughput (325 tok/s), 3.5x KV capacity, and cut TPOT P99 from 65ms to 40ms.
+• Uncalibrated FP8 KV (BF16 or AWQ): fastest throughput on both GPUs (L4: 350 tok/s, Blackwell: 1,448 tok/s) — and 0% valid SQL on BOTH L4 and Blackwell.
 
-With --kv-cache-dtype fp8 on Blackwell (SM 12.0), vLLM returned HTTP 200 and fast streams, while emitting garbled SQL like:
+When I checked the actual outputs, --kv-cache-dtype fp8 returned HTTP 200 at full speed while emitting garbled SQL like:
 "SELECT org_name, , credit_balance_usd FROM schema WHERE tier = ' '-enterprise"
 
-I didn't stop at the first run—I tested both FlashInfer and Triton Attention, turned off prefix caching, and even tried dynamic fp8_per_token_head scaling. All of them returned 0% valid SQL on SM 12.0, while fp8_e5m2 crashed at startup.
+I tested FlashInfer, Triton Attention, no prefix caching, and dynamic fp8_per_token_head—none of them rescued uncalibrated FP8 KV on Qwen2.5-7B.
 
-Lesson: Never benchmark inference configs with tok/s alone. Always run a real output/execution check before turning on FP8 KV cache on new GPU architectures.
+Lesson:
+1. AWQ 4-bit + FP16 KV is a clean win on L4 (+58% speed for -2% SQL accuracy).
+2. Never ship uncalibrated FP8 KV on Qwen2.5-7B based on tok/s alone—always keep a real output verifier in the loop.
 
-50-task SQLite verifier + raw logs: https://github.com/giordanoshai/vllm-prefix-cache-benchmark
+50-task SQLite verifier + raw L4/Blackwell JSON logs: https://github.com/giordanoshai/vllm-prefix-cache-benchmark
 
-#vLLM #LLMInference #GPU #Blackwell #AIInfrastructure #Python
+#vLLM #LLMInference #GPU #AIInfrastructure #Python
+```
+
+### X (Twitter) Version (Main Post + Self-Reply with Link)
+
+**Tweet 1 (Attach `charts/chart_accuracy_vs_quantization.png`, NO external link in Tweet 1):**
+```text
+Someone asked if vLLM FP8 KV cache hurts output quality, not just tok/s.
+So I built a 50-task SQLite execution benchmark and tested Qwen2.5-7B on BOTH an NVIDIA L4 (SM 8.9) and a Blackwell RTX PRO 6000 (SM 12.0) on @vllm_project 0.34.0 (c=16).
+
+Identical accuracy on both GPUs:
+• BF16 + FP16 KV: 84% valid SQL | 62% exact match
+• AWQ 4-bit + FP16 KV: 80% valid | 60% exact match (+58% speed & 3.5x KV pool on L4)
+• Uncalibrated FP8 KV (BF16 or AWQ): fastest speed (350 tok/s L4, 1,448 tok/s Blackwell) — and 0% valid SQL on BOTH GPUs.
+
+It returned HTTP 200 at full speed while emitting garbled SQL ("SELECT org_name, , credit_balance_usd...").
+
+Never benchmark inference configs on tok/s alone without an execution verifier. 👇
+```
+
+**Tweet 2 (Reply to Tweet 1 with the GitHub link):**
+```text
+50-task SQLite verifier, raw L4 + Blackwell JSON telemetry, and plotting scripts:
+https://github.com/giordanoshai/vllm-prefix-cache-benchmark
 ```
 
 ### Reply to the Original L4 Commenter (After Posting Part 2)
 
 ```text
-Great question—I followed up and built a 50-task Text-to-SQL execution verifier (in-memory SQLite) to test BF16 vs AWQ 4-bit × FP16 vs FP8 KV cache on Qwen2.5-7B (vLLM 0.34.0 on an RTX PRO 6000 Blackwell).
+Great question—I followed up and built a 50-task Text-to-SQL execution verifier (in-memory SQLite) and tested Qwen2.5-7B across both an NVIDIA L4 and an RTX PRO 6000 Blackwell (vLLM 0.34.0, c=16).
 
-On FP16 KV, AWQ 4-bit behaved close to what you saw: +31% throughput (1,049 → 1,372 tok/s) for a 2-point drop in exact execution accuracy (62% → 60%).
+On FP16 KV, AWQ 4-bit was a clean win on L4: +58% throughput (206 → 325 tok/s), 3.5x KV capacity, and TPOT P99 dropped from 65ms to 40ms for just a 2-point drop in exact execution accuracy (62% → 60%).
 
-The real surprise was FP8 KV on Blackwell (SM 12.0): AWQ + FP8 KV hit the top speed (1,448 tok/s) while silently emitting 0% valid SQL—across FlashInfer, Triton Attention, and even dynamic fp8_per_token_head.
+The real surprise was uncalibrated --kv-cache-dtype fp8 on Qwen2.5-7B: on BOTH L4 and Blackwell, AWQ + FP8 KV posted the top speed (350 tok/s on L4, 1,448 tok/s on Blackwell) while silently emitting 0% valid SQL! Even Triton Attention and fp8_per_token_head collapsed without calibrated scales.
 
-Just wrote up the full breakdown and verifier repo here if you'd like to compare notes!
+Just wrote up the full L4 vs Blackwell breakdown and verifier repo if you'd like to compare notes!
 ```

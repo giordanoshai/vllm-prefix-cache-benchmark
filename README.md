@@ -92,34 +92,51 @@ An empirical benchmark and systems analysis of **vLLM Automatic Prefix Caching (
 
 ---
 
-## 5. Part 2: Quantization Speed vs. SQLite Execution Quality (50-Task Ablation on Blackwell SM 12.0)
+## 5. Part 2: Quantization Speed vs. SQLite Execution Quality (NVIDIA L4 vs. Blackwell SM 12.0)
 
-Following feedback on Part 1 asking whether `AWQ + FP8 KV Cache` hurts output quality (not just throughput), I built a deterministic 50-task Text-to-SQL benchmark ([sql_accuracy_eval.py](sql_accuracy_eval.py)) backed by a seeded in-memory SQLite 3 database (`seed=42`, 4 tables matching the cloud telemetry schema, spanning filtering/`NULL`s, multi-table `JOIN`/`HAVING`, `CASE WHEN` ratios, and Window/CTE queries).
+Following feedback on Part 1 asking whether `AWQ + FP8 KV Cache` hurts output quality (not just throughput) on an NVIDIA L4, I built a deterministic 50-task Text-to-SQL benchmark ([sql_accuracy_eval.py](sql_accuracy_eval.py)) backed by a seeded in-memory SQLite 3 database (`seed=42`, 4 tables matching the cloud telemetry schema, spanning filtering/`NULL`s, multi-table `JOIN`/`HAVING`, `CASE WHEN` ratios, and Window/CTE queries).
 
-Evaluated on `NVIDIA RTX PRO 6000 Blackwell Server Edition` (`SM 12.0`, `vLLM 0.34.0`, `c=16`, `--gpu-memory-utilization 0.29`):
+Evaluated across **two GPU architectures** running `vLLM 0.34.0` (`c=16`):
+- **NVIDIA L4 (24GB, Ada Lovelace SM 8.9)** — `--gpu-memory-utilization 0.85` (raw JSON: [results_sql_accuracy_l4.json](results_sql_accuracy_l4.json))
+- **NVIDIA RTX PRO 6000 Blackwell Server Edition (SM 12.0)** — `--gpu-memory-utilization 0.29` (raw JSON: [results_sql_accuracy_ablation.json](results_sql_accuracy_ablation.json))
 
 ![Quantization Speed vs. SQLite Execution Accuracy](charts/chart_accuracy_vs_quantization.png)
 
-| Setup | Model Weights | KV Cache | Backend | KV Pool (Tokens) | Throughput (tok/s) | TTFT P99 (ms) | TPOT P99 (ms) | SQL Syntax Valid | Exact SQLite Exec Match |
-|---|---|---|---|---:|---:|---:|---:|---:|---:|
-| **BF16 + FP16 KV (Baseline)** | `Qwen2.5-7B-Instruct` | `auto` (FP16) | Default | `208,896` | `1,048.98` | `101.9` | `13.2` | **84.0%** | **62.0%** |
-| **AWQ 4-bit + FP16 KV** | `Qwen2.5-7B-Instruct-AWQ` | `auto` (FP16) | Default | `375,808` | **`1,372.15`** (+30.8%) | `100.7` | `9.4` | **80.0%** | **60.0%** (-2.0%) |
-| **BF16 + FP8 KV** | `Qwen2.5-7B-Instruct` | `fp8` | FlashInfer | `382,976` | `942.38` | `104.7` | `13.0` | **0.0%** | **0.0%** |
-| **AWQ 4-bit + FP8 KV** | `Qwen2.5-7B-Instruct-AWQ` | `fp8` | FlashInfer | `716,800` | **`1,448.18`** | `104.5` | `9.3` | **0.0%** | **0.0%** |
-| **BF16 + FP8 KV (Triton)** | `Qwen2.5-7B-Instruct` | `fp8` | `TRITON_ATTN` | `417,792` | `847.44` | `509.3` | `35.1` | **0.0%** | **0.0%** |
-| **AWQ 4-bit + FP8 KV (Triton)** | `Qwen2.5-7B-Instruct-AWQ` | `fp8` | `TRITON_ATTN` | `751,616` | `1,101.91` | `523.5` | `35.0` | **0.0%** | **0.0%** |
-| **BF16 + FP8 KV (No PrefixCache)** | `Qwen2.5-7B-Instruct` | `fp8` | `FLASHINFER` | `382,976` | `823.87` | `601.8` | `25.0` | **0.0%** | **0.0%** |
-| **BF16 + FP8_PER_TOKEN_HEAD** | `Qwen2.5-7B-Instruct` | `fp8_per_token_head` | `TRITON_ATTN` | `405,120` | `823.93` | `572.2` | `37.4` | **0.0%** | **0.0%** |
-| **BF16 + FP8 KV (FlashAttn)** | `Qwen2.5-7B-Instruct` | `fp8` | `FLASH_ATTN` | — | *Failed to start* | — | — | — | *Requires SM90/SM100* |
-| **BF16 + FP8_E5M2 KV** | `Qwen2.5-7B-Instruct` | `fp8_e5m2` | Default / Triton | — | *Failed to start* | — | — | — | *Triton CUDA IMA / crash* |
+### 5.1 Side-by-Side Comparison: NVIDIA L4 (SM 8.9) vs. Blackwell (SM 12.0)
+
+| Setup | GPU | KV Pool (Tokens) | Throughput (tok/s) | TTFT P99 (ms) | TPOT P99 (ms) | SQL Syntax Valid | Exact SQLite Exec Match |
+|---|---|---:|---:|---:|---:|---:|---:|
+| **BF16 + FP16 KV (Baseline)** | **L4 (SM 8.9)** | `67,584` (`16.5x @ 4k`) | `205.76` | `565.6` | `65.3` | **84.0%** | **62.0%** |
+| **AWQ 4-bit + FP16 KV** | **L4 (SM 8.9)** | `235,520` *(3.48x)* | **`325.12`** *(+58.0%)* | `631.3` | **`40.1`** | **80.0%** | **60.0%** *(-2.0%)* |
+| **BF16 + FP8 KV** | **L4 (SM 8.9)** | `120,832` | `177.80` | `536.7` | `65.3` | **0.0%** | **0.0%** |
+| **AWQ 4-bit + FP8 KV** | **L4 (SM 8.9)** | `454,656` *(6.73x)* | **`350.33`** *(fastest)* | `606.2` | `37.7` | **0.0%** | **0.0%** |
+| **BF16 + FP16 KV (Baseline)** | **Blackwell (SM 12.0)** | `208,896` | `1,048.98` | `101.9` | `13.2` | **84.0%** | **62.0%** |
+| **AWQ 4-bit + FP16 KV** | **Blackwell (SM 12.0)** | `375,808` *(1.80x)* | **`1,372.15`** *(+30.8%)* | `100.7` | **`9.4`** | **80.0%** | **60.0%** *(-2.0%)* |
+| **BF16 + FP8 KV** | **Blackwell (SM 12.0)** | `382,976` | `942.38` | `104.7` | `13.0` | **0.0%** | **0.0%** |
+| **AWQ 4-bit + FP8 KV** | **Blackwell (SM 12.0)** | `716,800` | **`1,448.18`** *(fastest)* | `104.5` | `9.3` | **0.0%** | **0.0%** |
+
+### 5.2 Blackwell Backend & Scaling Diagnostics (`vLLM 0.34.0`)
+
+To verify whether the `0.0%` FP8 KV failure was tied to a specific attention kernel, Prefix Caching, or static `scale=1.0` range limits, I tested additional flags on Blackwell:
+
+| Diagnostic Config | KV Pool (Tokens) | Throughput (tok/s) | SQL Syntax Valid | Notes |
+|---|---:|---:|---:|---|
+| **BF16 + FP8 KV (`TRITON_ATTN`)** | `417,792` | `847.44` | **0.0%** | Identical syntax corruption |
+| **AWQ 4-bit + FP8 KV (`TRITON_ATTN`)** | `751,616` | `1,101.91` | **0.0%** | Identical syntax corruption |
+| **BF16 + FP8 KV (No PrefixCache)** | `382,976` | `823.87` | **0.0%** | Rules out prefix cache block reuse |
+| **BF16 + `fp8_per_token_head`** | `405,120` | `823.93` | **0.0%** | Even dynamic per-token-head scaling returned 0% |
+| **BF16 + FP8 KV (`FLASH_ATTN`)** | — | *Failed to start* | — | `Requires FA3 (SM90) or FA4 (SM90/SM100)` |
+| **BF16 + `fp8_e5m2` KV** | — | *Failed to start* | — | `Triton Error [CUDA]: illegal memory access` / startup failure |
 
 ### Key Takeaways from Part 2
 
-1. **AWQ 4-bit + FP16 KV Is a Clean Production Tradeoff**:
-   On FP16 KV cache, moving from `BF16` to `AWQ 4-bit` boosted throughput by **+30.8%** (`1,049.0 → 1,372.2 tok/s`), cut TPOT P99 from `13.2 ms` to `9.4 ms`, and expanded KV cache capacity **1.8x** (`208.9K → 375.8K` tokens) while sacrificing only **-2.0%** execution accuracy (`62.0% → 60.0%`). Typical AWQ regressions appeared on schema joins and complex aggregations (`case_ratio`: `50% → 40%`, `window_cte`: `40% → 33.3%`, e.g., joining `gpu_nodes` directly to `inference_telemetry` or writing `MAX(it(kv_cache_usage_pct))`), while `filter_null` stayed at `100%`.
-2. **Why Throughput-Only Benchmarks Are Dangerous — Silent FP8 KV Corruption on Blackwell (SM 12.0)**:
-   Every single FP8 KV Cache run (`fp8` across `FLASHINFER`, `TRITON_ATTN`, with or without `--enable-prefix-caching`, AND dynamic `fp8_per_token_head`) started cleanly, passed `/health`, and streamed HTTP 200 tokens at `824–1,448 tok/s`. In fact, `AWQ 4-bit + FP8 KV` posted the **highest throughput in the entire sweep (`1,448.18 tok/s`, `716.8K` KV tokens)**—yet emitted **0.0% valid SQL** (e.g., `SELECT org_name, , credit_balance_usd FROM schema WHERE tier = ' '-enterprise` and `SELECT node,,,, data data datacenter_region`).
-   - Always wire a **deterministic syntax/execution verifier** into your inference CI before flipping quantization or attention backend flags on new GPU architectures (`SM 12.0` Blackwell).
+1. **AWQ 4-bit + FP16 KV Is a Huge Win on Memory-Bandwidth-Bound GPUs (Especially L4)**:
+   - Accuracy reproduced identically to the tenth of a percent on **both** GPUs: **`84% → 80%` syntax**, **`62% → 60%` exact execution match (-2.0%)**.
+   - On **NVIDIA L4**, switching from BF16 to AWQ 4-bit boosted throughput by **+58.0% (`205.8 → 325.1 tok/s`)**, expanded KV capacity **3.48x (`67.6K → 235.5K` tokens)**, and pulled **TPOT P99 from `65.3 ms` down to `40.1 ms`**—bringing it inside a `<45 ms` interactive SLA.
+   - Typical AWQ regressions appeared on schema joins and complex aggregations (`case_ratio`: `50% → 40%`, `window_cte`: `40% → 33.3%`), while `filter_null` stayed at `100%`.
+2. **Why Throughput-Only Benchmarks Are Dangerous — Uncalibrated FP8 KV Cache on `Qwen2.5-7B`**:
+   - Checking on **L4 (SM 8.9)** proved this was **not** a Blackwell-only issue: uncalibrated `--kv-cache-dtype fp8` on `Qwen2.5-7B-Instruct` caused **0.0% valid SQL on BOTH L4 and Blackwell** (emitting garbled SQL like `SELECT org_name, , credit_balance_usd FROM schema WHERE tier = ' '-enterprise` while returning HTTP 200 at the highest throughput in the sweep: `350.3 tok/s` on L4, `1,448.2 tok/s` on Blackwell).
+   - Unlike model families with bounded K/V activations (which only drop a few points with uncalibrated FP8 KV), `Qwen2.5-7B-Instruct` requires **properly calibrated KV scaling factors** before flipping `--kv-cache-dtype fp8` in production—and teams must always wire a **deterministic output/execution verifier** into inference CI before trusting `tok/s` benchmarks.
 
 ### Reproducing Part 2
 
@@ -128,8 +145,11 @@ Evaluated on `NVIDIA RTX PRO 6000 Blackwell Server Edition` (`SM 12.0`, `vLLM 0.
 python research-vllm-benchmark/sql_accuracy_eval.py --validate-local
 
 # 2. Run the 4-way quantization ablation against live vLLM instances
-python research-vllm-benchmark/sql_accuracy_eval.py --run-ablation --concurrency 16 --out results_sql_accuracy_ablation.json
+python research-vllm-benchmark/sql_accuracy_eval.py --run-ablation --concurrency 16 --out results_sql_accuracy_l4.json
 
-# 3. Generate the accuracy vs. throughput chart
-python research-vllm-benchmark/plot_accuracy_ablation.py results_sql_accuracy_ablation.json research-vllm-benchmark/charts
+# 3. Generate the cross-GPU accuracy vs. throughput chart
+python research-vllm-benchmark/plot_accuracy_ablation.py \
+  research-vllm-benchmark/results_sql_accuracy_ablation.json \
+  research-vllm-benchmark/results_sql_accuracy_l4.json \
+  research-vllm-benchmark/charts
 ```
