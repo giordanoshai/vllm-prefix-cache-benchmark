@@ -114,3 +114,44 @@ At `c=64` with Prefix Caching hitting (`4,613.94 output tok/s` = `16.61M output 
 **Tweet 7/7 (Open Source Repo)**
 Full benchmark suite (`asyncio` SSE profiler that properly skips the initial empty `role: assistant` delta, workload generator, raw JSON telemetry, and plotting scripts) is open-sourced here:
 https://github.com/giordanoshai/vllm-prefix-cache-benchmark (@vllm_project)
+
+---
+
+## Option 3: Part 2 Follow-Up Post (Answering the Commenter: Speed vs. SQLite Execution Quality on Blackwell SM 12.0)
+
+### LinkedIn Post (Short & Punchy — Yimin Signature Style)
+*(Attach `charts/chart_accuracy_vs_quantization.png`)*
+
+```text
+Last week, someone asked in the comments: "You tested FP8 KV cache throughput—did you check output quality too? On L4, AWQ + FP8 KV dropped accuracy from 83.6% to 79.6%."
+
+So I built a 50-task Text-to-SQL benchmark backed by a real in-memory SQLite database and tested Qwen2.5-7B across 4 setups on an NVIDIA RTX PRO 6000 Blackwell (vLLM 0.34.0, c=16).
+
+What I found was way worse than a 4% drop:
+• BF16 + FP16 KV (baseline): 84% valid SQL, 62% exact execution match (1,049 tok/s).
+• AWQ 4-bit + FP16 KV: 80% valid SQL, 60% exact match (1,372 tok/s, +31% speed, 1.8x KV capacity).
+• AWQ 4-bit + FP8 KV: fastest throughput of all at 1,448 tok/s (717K KV tokens) — and 0% valid SQL.
+
+With --kv-cache-dtype fp8 on Blackwell (SM 12.0), vLLM returned HTTP 200 and fast streams, while emitting garbled SQL like:
+"SELECT org_name, , credit_balance_usd FROM schema WHERE tier = ' '-enterprise"
+
+I didn't stop at the first run—I tested both FlashInfer and Triton Attention, turned off prefix caching, and even tried dynamic fp8_per_token_head scaling. All of them returned 0% valid SQL on SM 12.0, while fp8_e5m2 crashed at startup.
+
+Lesson: Never benchmark inference configs with tok/s alone. Always run a real output/execution check before turning on FP8 KV cache on new GPU architectures.
+
+50-task SQLite verifier + raw logs: https://github.com/giordanoshai/vllm-prefix-cache-benchmark
+
+#vLLM #LLMInference #GPU #Blackwell #AIInfrastructure #Python
+```
+
+### Reply to the Original L4 Commenter (After Posting Part 2)
+
+```text
+Great question—I followed up and built a 50-task Text-to-SQL execution verifier (in-memory SQLite) to test BF16 vs AWQ 4-bit × FP16 vs FP8 KV cache on Qwen2.5-7B (vLLM 0.34.0 on an RTX PRO 6000 Blackwell).
+
+On FP16 KV, AWQ 4-bit behaved close to what you saw: +31% throughput (1,049 → 1,372 tok/s) for a 2-point drop in exact execution accuracy (62% → 60%).
+
+The real surprise was FP8 KV on Blackwell (SM 12.0): AWQ + FP8 KV hit the top speed (1,448 tok/s) while silently emitting 0% valid SQL—across FlashInfer, Triton Attention, and even dynamic fp8_per_token_head.
+
+Just wrote up the full breakdown and verifier repo here if you'd like to compare notes!
+```

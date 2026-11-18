@@ -89,3 +89,47 @@ An empirical benchmark and systems analysis of **vLLM Automatic Prefix Caching (
 2. **vLLM V1 Engine `flashinfer_sample` JIT Failure on Minimal Driver Containers (`RuntimeError: Could not find nvcc`)**:
    When deploying vLLM on minimal container images or WSL2 nodes that only mount the host NVIDIA driver (`/usr/lib/wsl/lib`) without a full `/usr/local/cuda/bin/nvcc` toolkit, `flashinfer-python` crashes during `determine_available_memory() -> _dummy_sampler_run()` when trying to JIT-compile `top_k_mask_logits` via Ninja.
    - **Fix**: Either pre-install precompiled cubins (`flashinfer-cubin`), or disable FlashInfer JIT sampling (`VLLM_USE_FLASHINFER_SAMPLER=0` / uninstall `flashinfer-python`) to fall back cleanly to native PyTorch/Triton kernels.
+
+---
+
+## 5. Part 2: Quantization Speed vs. SQLite Execution Quality (50-Task Ablation on Blackwell SM 12.0)
+
+Following feedback on Part 1 asking whether `AWQ + FP8 KV Cache` hurts output quality (not just throughput), I built a deterministic 50-task Text-to-SQL benchmark ([sql_accuracy_eval.py](sql_accuracy_eval.py)) backed by a seeded in-memory SQLite 3 database (`seed=42`, 4 tables matching the cloud telemetry schema, spanning filtering/`NULL`s, multi-table `JOIN`/`HAVING`, `CASE WHEN` ratios, and Window/CTE queries).
+
+Evaluated on `NVIDIA RTX PRO 6000 Blackwell Server Edition` (`SM 12.0`, `vLLM 0.34.0`, `c=16`, `--gpu-memory-utilization 0.29`):
+
+![Quantization Speed vs. SQLite Execution Accuracy](charts/chart_accuracy_vs_quantization.png)
+
+| Setup | Model Weights | KV Cache | Backend | KV Pool (Tokens) | Throughput (tok/s) | TTFT P99 (ms) | TPOT P99 (ms) | SQL Syntax Valid | Exact SQLite Exec Match |
+|---|---|---|---|---:|---:|---:|---:|---:|---:|
+| **BF16 + FP16 KV (Baseline)** | `Qwen2.5-7B-Instruct` | `auto` (FP16) | Default | `208,896` | `1,048.98` | `101.9` | `13.2` | **84.0%** | **62.0%** |
+| **AWQ 4-bit + FP16 KV** | `Qwen2.5-7B-Instruct-AWQ` | `auto` (FP16) | Default | `375,808` | **`1,372.15`** (+30.8%) | `100.7` | `9.4` | **80.0%** | **60.0%** (-2.0%) |
+| **BF16 + FP8 KV** | `Qwen2.5-7B-Instruct` | `fp8` | FlashInfer | `382,976` | `942.38` | `104.7` | `13.0` | **0.0%** | **0.0%** |
+| **AWQ 4-bit + FP8 KV** | `Qwen2.5-7B-Instruct-AWQ` | `fp8` | FlashInfer | `716,800` | **`1,448.18`** | `104.5` | `9.3` | **0.0%** | **0.0%** |
+| **BF16 + FP8 KV (Triton)** | `Qwen2.5-7B-Instruct` | `fp8` | `TRITON_ATTN` | `417,792` | `847.44` | `509.3` | `35.1` | **0.0%** | **0.0%** |
+| **AWQ 4-bit + FP8 KV (Triton)** | `Qwen2.5-7B-Instruct-AWQ` | `fp8` | `TRITON_ATTN` | `751,616` | `1,101.91` | `523.5` | `35.0` | **0.0%** | **0.0%** |
+| **BF16 + FP8 KV (No PrefixCache)** | `Qwen2.5-7B-Instruct` | `fp8` | `FLASHINFER` | `382,976` | `823.87` | `601.8` | `25.0` | **0.0%** | **0.0%** |
+| **BF16 + FP8_PER_TOKEN_HEAD** | `Qwen2.5-7B-Instruct` | `fp8_per_token_head` | `TRITON_ATTN` | `405,120` | `823.93` | `572.2` | `37.4` | **0.0%** | **0.0%** |
+| **BF16 + FP8 KV (FlashAttn)** | `Qwen2.5-7B-Instruct` | `fp8` | `FLASH_ATTN` | — | *Failed to start* | — | — | — | *Requires SM90/SM100* |
+| **BF16 + FP8_E5M2 KV** | `Qwen2.5-7B-Instruct` | `fp8_e5m2` | Default / Triton | — | *Failed to start* | — | — | — | *Triton CUDA IMA / crash* |
+
+### Key Takeaways from Part 2
+
+1. **AWQ 4-bit + FP16 KV Is a Clean Production Tradeoff**:
+   On FP16 KV cache, moving from `BF16` to `AWQ 4-bit` boosted throughput by **+30.8%** (`1,049.0 → 1,372.2 tok/s`), cut TPOT P99 from `13.2 ms` to `9.4 ms`, and expanded KV cache capacity **1.8x** (`208.9K → 375.8K` tokens) while sacrificing only **-2.0%** execution accuracy (`62.0% → 60.0%`). Typical AWQ regressions appeared on schema joins and complex aggregations (`case_ratio`: `50% → 40%`, `window_cte`: `40% → 33.3%`, e.g., joining `gpu_nodes` directly to `inference_telemetry` or writing `MAX(it(kv_cache_usage_pct))`), while `filter_null` stayed at `100%`.
+2. **Why Throughput-Only Benchmarks Are Dangerous — Silent FP8 KV Corruption on Blackwell (SM 12.0)**:
+   Every single FP8 KV Cache run (`fp8` across `FLASHINFER`, `TRITON_ATTN`, with or without `--enable-prefix-caching`, AND dynamic `fp8_per_token_head`) started cleanly, passed `/health`, and streamed HTTP 200 tokens at `824–1,448 tok/s`. In fact, `AWQ 4-bit + FP8 KV` posted the **highest throughput in the entire sweep (`1,448.18 tok/s`, `716.8K` KV tokens)**—yet emitted **0.0% valid SQL** (e.g., `SELECT org_name, , credit_balance_usd FROM schema WHERE tier = ' '-enterprise` and `SELECT node,,,, data data datacenter_region`).
+   - Always wire a **deterministic syntax/execution verifier** into your inference CI before flipping quantization or attention backend flags on new GPU architectures (`SM 12.0` Blackwell).
+
+### Reproducing Part 2
+
+```bash
+# 1. Validate the seeded SQLite sandbox & all 50 ground-truth SQL queries locally (no GPU required)
+python research-vllm-benchmark/sql_accuracy_eval.py --validate-local
+
+# 2. Run the 4-way quantization ablation against live vLLM instances
+python research-vllm-benchmark/sql_accuracy_eval.py --run-ablation --concurrency 16 --out results_sql_accuracy_ablation.json
+
+# 3. Generate the accuracy vs. throughput chart
+python research-vllm-benchmark/plot_accuracy_ablation.py results_sql_accuracy_ablation.json research-vllm-benchmark/charts
+```

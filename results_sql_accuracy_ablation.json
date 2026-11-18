@@ -1,0 +1,820 @@
+{
+  "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+  "concurrency": 16,
+  "num_tasks": 50,
+  "results": [
+    {
+      "label": "BF16 + FP16 KV",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "kv_cache_dtype": "auto",
+      "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "gpu_mem_util": 0.29,
+      "concurrency": 16,
+      "kv_cache_gib": 11.44,
+      "kv_cache_tokens": 208896,
+      "max_conc_4k": 51.0,
+      "total_tasks": 50,
+      "succeeded_requests": 50,
+      "syntax_valid_count": 42,
+      "syntax_valid_pct": 84.0,
+      "exec_match_count": 31,
+      "exec_accuracy_pct": 62.0,
+      "category_accuracy_pct": {
+        "filter_null": 100.0,
+        "join_having": 66.7,
+        "case_ratio": 50.0,
+        "window_cte": 40.0
+      },
+      "throughput_tok_per_s": 1048.98,
+      "ttft_p50_ms": 40.6,
+      "ttft_p99_ms": 101.9,
+      "tpot_p50_ms": 12.5,
+      "tpot_p99_ms": 13.2,
+      "wall_time_s": 5.37,
+      "failures_sample": [
+        {
+          "id": "SQL14",
+          "error": "syntax: no such column: p.recorded_at",
+          "pred_sql": "SELECT DISTINCT p.pod_id, o.org_name\nFROM pod_deployments p\nJOIN organizations o ON p.org_id = o.org_id\nWHERE p.deployment_type = 'serverless_worker'\nAND p.recorded_at >= '2026-11-17T12:00:00Z'\nAND p.ttft_p99_ms > 1500.0\nAND p.active_concur"
+        },
+        {
+          "id": "SQL15",
+          "error": "mismatch (got 97 rows vs gt 10 rows)",
+          "pred_sql": "SELECT \n    pd.pod_id, \n    gn.gpu_model, \n    MAX(it.kv_cache_usage_pct) AS max_kv_pct\nFROM \n    pod_deployments pd\nJOIN \n    gpu_nodes gn ON pd.node_id = gn.node_id\nJOIN \n    inference_telemetry it ON pd.pod_id = it.pod_id\nWHERE \n    it.k"
+        },
+        {
+          "id": "SQL19",
+          "error": "syntax: no such column: container_image",
+          "pred_sql": "SELECT \n    container_image, \n    AVG(prefix_cache_hit_rate_pct) AS avg_hit_rate, \n    AVG(ttft_p50_ms) AS avg_ttft_p50\nFROM \n    inference_telemetry\nWHERE \n    active_concurrency >= 16\nGROUP BY \n    container_image\nORDER BY \n    avg_ttft_p"
+        },
+        {
+          "id": "SQL20",
+          "error": "mismatch (got 4 rows vs gt 4 rows)",
+          "pred_sql": "SELECT \n    o.tier,\n    COUNT(DISTINCT p.pod_id) AS active_pods,\n    SUM(it.tokens_generated_delta) AS tokens_24h\nFROM \n    organizations o\nJOIN \n    pod_deployments p ON o.org_id = p.org_id\nLEFT JOIN \n    inference_telemetry it ON p.pod_id"
+        },
+        {
+          "id": "SQL22",
+          "error": "mismatch (got 4 rows vs gt 4 rows)",
+          "pred_sql": "SELECT \n    g.gpu_model, \n    AVG(i.waiting_queue_depth) AS avg_wait_depth\nFROM \n    pod_deployments p\nJOIN \n    gpu_nodes g ON p.node_id = g.node_id\nJOIN \n    inference_telemetry i ON p.pod_id = i.pod_id\nWHERE \n    i.active_concurrency >= "
+        },
+        {
+          "id": "SQL26",
+          "error": "mismatch (got 3 rows vs gt 3 rows)",
+          "pred_sql": "SELECT \n    deployment_type, \n    COUNT(*) AS total_pods, \n    CAST(SUM(CASE WHEN exit_code = 137 THEN 1 ELSE 0 END) AS REAL) * 100.0 / COUNT(*) AS oom_pct\nFROM \n    pod_deployments\nWHERE \n    terminated_at IS NOT NULL\nGROUP BY \n    deploym"
+        },
+        {
+          "id": "SQL27",
+          "error": "mismatch (got 4 rows vs gt 6 rows)",
+          "pred_sql": "SELECT \n    active_concurrency,\n    COUNT(*) AS total_snapshots,\n    ROUND(100.0 * SUM(CASE WHEN ttft_p99_ms >= 800.0 OR tpot_p99_ms >= 45.0 THEN 1 ELSE 0 END) / COUNT(*), 2) AS sla_violation_pct\nFROM \n    inference_telemetry\nWHERE \n    rec"
+        },
+        {
+          "id": "SQL29",
+          "error": "syntax: no such function: i",
+          "pred_sql": "SELECT \n    g.datacenter_region,\n    COUNT(CASE WHEN i(kv_cache_usage_pct, 92.0) > 0 AND i(num_preemptions_delta, 0) > 0 THEN 1 ELSE NULL END) AS pressure_count,\n    COUNT(*) AS total_count\nFROM \n    inference_telemetry i\nJOIN \n    gpu_node"
+        },
+        {
+          "id": "SQL31",
+          "error": "syntax: unrecognized token: \":\"",
+          "pred_sql": "SELECT \n    prefix_caching_enabled, \n    AVG(CASE WHEN prefix_caching_enabled = '1' THEN kv_cache_usage_pct ELSE NULL END) AS avg_hit_rate, \n    AVG(CASE WHEN prefix_caching_enabled = '1' THEN ttft_p50_ms ELSE NULL END) AS avg_ttft_p50\nFROM"
+        },
+        {
+          "id": "SQL33",
+          "error": "mismatch (got 4 rows vs gt 4 rows)",
+          "pred_sql": "SELECT \n    gpu_model,\n    COUNT(*) AS queued_snapshots,\n    CAST(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (PARTITION BY gpu_model) AS REAL) AS queuing_pct\nFROM \n    inference_telemetry IT\nJOIN \n    pod_deployments PD ON IT.pod_id = PD.pod_id\n"
+        }
+      ]
+    },
+    {
+      "label": "BF16 + FP8 KV (FlashInfer Default)",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "kv_cache_dtype": "fp8",
+      "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "gpu_mem_util": 0.29,
+      "concurrency": 16,
+      "kv_cache_gib": 11.44,
+      "kv_cache_tokens": 382976,
+      "max_conc_4k": 93.5,
+      "total_tasks": 50,
+      "succeeded_requests": 49,
+      "syntax_valid_count": 0,
+      "syntax_valid_pct": 0.0,
+      "exec_match_count": 0,
+      "exec_accuracy_pct": 0.0,
+      "category_accuracy_pct": {
+        "filter_null": 0.0,
+        "join_having": 0.0,
+        "case_ratio": 0.0,
+        "window_cte": 0.0
+      },
+      "throughput_tok_per_s": 942.38,
+      "ttft_p50_ms": 39.3,
+      "ttft_p99_ms": 104.7,
+      "tpot_p50_ms": 11.8,
+      "tpot_p99_ms": 13.0,
+      "wall_time_s": 9.78,
+      "failures_sample": [
+        {
+          "id": "SQL01",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT org_name, , credit_balance_usd\nFROM schema\nWHERE tier = ' '-enterprise\nORDER BY credit_credit_balance_usd ASC, , org_name ASC;"
+        },
+        {
+          "id": "SQL02",
+          "error": "syntax: unrecognized token: \"'_nvme\nORDER BY node_code ASC;\"",
+          "pred_sql": "SELECT node_id, interconnect_type, nvme_bandwidth_gbps\nFROM gpu_nodes\nWHERE interconnect_type = '_nvme\nORDER BY node_code ASC;"
+        },
+        {
+          "id": "SQL03",
+          "error": "empty_sql",
+          "pred_sql": ""
+        },
+        {
+          "id": "SQL04",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \npod_de,, COalesce((termination_reason,,,STILL_RUNNING\\),, )status_label\nFROM \\schema_deploy\\ WHERE\nWHERE \\(org_id\\ = 'org_id\\ AND \\terminated_at IS nullNULL\\ AND \\exit_code is \\.IS NULL\\\nORDER BY \\pod_de\\ ASC;"
+        },
+        {
+          "id": "SQL05",
+          "error": "syntax: near \"=\": syntax error",
+          "pred_sql": "SELECT DISTINCT container_image\nFROM inference_telemetry\nJOIN schema_deployments ON inference_telemetry.p = = schema_deploy pe .\nWHERE deployment_type = ''spt spot\n``spot_pod\n AND exit_reason IS NULL\nORDER BY container_image ASC;"
+        },
+        {
+          "id": "SQL06",
+          "error": "syntax: near \"AS\": syntax error",
+          "pred_sql": "SELECT \ndata_center_region, SUM(a(v_vram_per_gpu_gb) AS total_vram_gb\nFROM gpu_nodes\nWHERE node_status != ' 'maintenance'\nGROUP BY data_center_region\nORDER BY SUMa_vram_gb DESC, data_center_region ASC;"
+        },
+        {
+          "id": "SQL07",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \npod_deployment, , \nrecordoded_at ,,, , (waiting_queue_depth) AS queue_waiting_queue_depth ,,,p\nFROM inference_telemetry\nORDER BY p p_ms DESC, , eoded_at ASC\nLIMIT 5 5"
+        },
+        {
+          "id": "SQL08",
+          "error": "syntax: near \"FROM\": syntax error",
+          "pred_sql": "SELECT tier,\nFROM (\ntier\nJOIN org ON schema.org_id =org_id TEXT\nJOIN schema.gpu_nodes ON schema.gpu_nodes .node_id =org\\n.node_id\nWHERE schema.credit_balance_usd > 0\nGROUP BY tier\nORDERBY tier ASC;"
+        },
+        {
+          "id": "SQL09",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \npod,,,, hourly_rate_ussda AS cost_hour_rate_uss_d\nFROM\n    schema_deployments\nWHERE\n    exit_code IS NULL AND\n    allocated_gpus >= 1\nORDER BY\n    hourly_rate_uss d DESC,\n,pod Do DESC;"
+        },
+        {
+          "id": "SQL10",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \npod_deployment,, SUM(tokens_generated_delta,, MAX(active_concurrency)\nFROM inference_telemetry\nWHERE recorded_at >= DATEADD(day,,, 2226TT1 222 24,,,)\nGROUP BY BY pod_deployment\nORDERBYY active_concurrency ASC;"
+        }
+      ]
+    },
+    {
+      "label": "AWQ 4-bit + FP16 KV",
+      "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "kv_cache_dtype": "auto",
+      "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "gpu_mem_util": 0.29,
+      "concurrency": 16,
+      "kv_cache_gib": 20.39,
+      "kv_cache_tokens": 375808,
+      "max_conc_4k": 91.75,
+      "total_tasks": 50,
+      "succeeded_requests": 50,
+      "syntax_valid_count": 40,
+      "syntax_valid_pct": 80.0,
+      "exec_match_count": 30,
+      "exec_accuracy_pct": 60.0,
+      "category_accuracy_pct": {
+        "filter_null": 100.0,
+        "join_having": 73.3,
+        "case_ratio": 40.0,
+        "window_cte": 33.3
+      },
+      "throughput_tok_per_s": 1372.15,
+      "ttft_p50_ms": 26.4,
+      "ttft_p99_ms": 100.7,
+      "tpot_p50_ms": 8.3,
+      "tpot_p99_ms": 9.4,
+      "wall_time_s": 4.04,
+      "failures_sample": [
+        {
+          "id": "SQL14",
+          "error": "syntax: no such column: p.recorded_at",
+          "pred_sql": "SELECT DISTINCT p.pod_id, o.org_name\nFROM pod_deployments p\nJOIN organizations o ON p.org_id = o.org_id\nWHERE p.deployment_type = 'serverless_worker'\nAND p.recorded_at >= '2026-11-17T12:00:00Z'\nAND p.ttft_p99_ms > 1500.0\nAND p.active_concur"
+        },
+        {
+          "id": "SQL15",
+          "error": "syntax: no such function: it",
+          "pred_sql": "SELECT \n    pd.pod_id, \n    gn.gpu_model, \n    MAX(it(kv_cache_usage_pct)) AS max_kv_pct\nFROM \n    pod_deployments pd\nJOIN \n    gpu_nodes gn ON pd.node_id = gn.node_id\nLEFT JOIN \n    inference_telemetry it ON pd.pod_id = it.pod_id\nGROUP BY "
+        },
+        {
+          "id": "SQL18",
+          "error": "mismatch (got 0 rows vs gt 4 rows)",
+          "pred_sql": "SELECT g.datacenter_region, SUM(i.num_preemptions_delta) AS total_preemptions\nFROM gpu_nodes g\nJOIN inference_telemetry i ON g.node_id = i.pod_id\nWHERE i.recorded_at >= '2026-11-11T12:00:00Z'\nGROUP BY g.datacenter_region\nHAVING SUM(i.num_pr"
+        },
+        {
+          "id": "SQL20",
+          "error": "mismatch (got 17 rows vs gt 4 rows)",
+          "pred_sql": "SELECT \n    o.tier,\n    COUNT(DISTINCT p.pod_id) AS active_pods,\n    SUM(i.tokens_generated_delta) AS tokens_24h\nFROM \n    organizations o\nJOIN \n    pod_deployments p ON o.org_id = p.org_id\nLEFT JOIN \n    inference_telemetry i ON p.pod_id ="
+        },
+        {
+          "id": "SQL26",
+          "error": "mismatch (got 3 rows vs gt 3 rows)",
+          "pred_sql": "SELECT \n    deployment_type,\n    COUNT(*) AS total_pods,\n    CAST(SUM(CASE WHEN exit_code = 137 THEN 1 ELSE 0 END) AS REAL) * 100 / COUNT(*) AS oom_pct\nFROM \n    pod_deployments\nWHERE \n    terminated_at IS NOT NULL\nGROUP BY \n    deployment_"
+        },
+        {
+          "id": "SQL27",
+          "error": "mismatch (got 3 rows vs gt 6 rows)",
+          "pred_sql": "SELECT \n    active_concurrency,\n    COUNT(*) AS total_snapshots,\n    CAST(SUM(CASE WHEN ttft_p99_ms >= 800.0 OR tpot_p99_ms >= 45.0 THEN 1 ELSE 0 END) AS REAL) * 100.0 / COUNT(*) AS sla_violation_pct\nFROM \n    inference_telemetry\nWHERE \n   "
+        },
+        {
+          "id": "SQL29",
+          "error": "syntax: no such function: i",
+          "pred_sql": "SELECT \n    g.datacenter_region,\n    COUNT(CASE WHEN i(kv_cache_usage_pct > 92.0 AND num_preemptions_delta > 0) THEN 1 END) AS pressure_count,\n    COUNT(*) AS total_count\nFROM \n    inference_telemetry i\nJOIN \n    pod_deployments p ON i.pod_"
+        },
+        {
+          "id": "SQL31",
+          "error": "mismatch (got 1 rows vs gt 2 rows)",
+          "pred_sql": "SELECT \n    prefix_caching_enabled, \n    AVG(hit_rate) AS avg_hit_rate, \n    AVG(ttft) AS avg_ttft_p50\nFROM (\n    SELECT \n        CASE \n            WHEN json_extract(vllm_args, '$.enable_prefix_caching') = '1' THEN 1 \n            ELSE 0 \n  "
+        },
+        {
+          "id": "SQL32",
+          "error": "syntax: no such column: vllm_args",
+          "pred_sql": "SELECT \n    json_extract(vllm_args, '$.kv_cache_dtype') AS kv_cache_dtype,\n    AVG(kv_cache_usage_pct) AS avg_kv_usage,\n    SUM(num_preemptions_delta) AS total_preemptions\nFROM \n    inference_telemetry\nGROUP BY \n    kv_cache_dtype\nORDER BY "
+        },
+        {
+          "id": "SQL33",
+          "error": "mismatch (got 0 rows vs gt 4 rows)",
+          "pred_sql": "SELECT \n    g.gpu_model,\n    COUNT(t.telemetry_id) AS queued_snapshots,\n    100.0 * COUNT(CASE WHEN t.waiting_queue_depth > 0 THEN t.telemetry_id END) / COUNT(t.telemetry_id) AS queuing_pct\nFROM \n    gpu_nodes g\nJOIN \n    inference_telemetr"
+        }
+      ]
+    },
+    {
+      "label": "AWQ 4-bit + FP8 KV (FlashInfer Default)",
+      "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "kv_cache_dtype": "fp8",
+      "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "gpu_mem_util": 0.29,
+      "concurrency": 16,
+      "kv_cache_gib": 20.38,
+      "kv_cache_tokens": 716800,
+      "max_conc_4k": 175.0,
+      "total_tasks": 50,
+      "succeeded_requests": 50,
+      "syntax_valid_count": 0,
+      "syntax_valid_pct": 0.0,
+      "exec_match_count": 0,
+      "exec_accuracy_pct": 0.0,
+      "category_accuracy_pct": {
+        "filter_null": 0.0,
+        "join_having": 0.0,
+        "case_ratio": 0.0,
+        "window_cte": 0.0
+      },
+      "throughput_tok_per_s": 1448.18,
+      "ttft_p50_ms": 26.1,
+      "ttft_p99_ms": 104.5,
+      "tpot_p50_ms": 8.0,
+      "tpot_p99_ms": 9.3,
+      "wall_time_s": 8.01,
+      "failures_sample": [
+        {
+          "id": "SQL01",
+          "error": "syntax: unrecognized token: \"'enterprise'' AND ORDER BY c_balance_usd ASC, org_name ASC;\"",
+          "pred_sql": "SELECT org_name, balance balance_balance_usd FROM organizations WHERE tier = 'enterprise'' AND ORDER BY c_balance_usd ASC, org_name ASC;"
+        },
+        {
+          "id": "SQL02",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT node,,,, data data datacenter_region, FROM gpu_nodes WHERE gpu_model LIKE '%g%' ORDER BY node asc;"
+        },
+        {
+          "id": "SQL03",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \n deployment_type,, COUNT(*) AS count_count\nFROM pod_deploytable\nWHERE terminated_at IS NULL\nGROUP BY deploymentployment_type\nORDER BY deployment_type ASC, deployment_type DESC;"
+        },
+        {
+          "id": "SQL04",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \npod,, \nCLOSERE(termination_reason) AS status_label\nFROM pod_deploytable\nWHERE JOIN organizations org org ON od.org =org.org_name\nWHERE org =org.org_name = =ORDER BY BY pod d ASC;"
+        },
+        {
+          "id": "SQL05",
+          "error": "syntax: near \"spot_pod\": syntax error",
+          "pred_sql": "SELECT DISTINCT container_image \n FROM pod_deploy_table \n WHERE deployment_type = ' 'spot_pod' AND AND node_status = pe healthy o AND AND AND exit_code = e 133\n ORDER BY container_image ASC;"
+        },
+        {
+          "id": "SQL06",
+          "error": "syntax: near \"node_datacenter_region\": syntax error",
+          "pred_sql": "SELECT \n node.datacenter_region, SUM(gpu_count *_vram_per_gpu_gb) AS total_vram_gb\nFROM gpu_nodes\nWHERE node_status != 'maintenance'\nGROUP BY data node_datacenter_region\nORDER BY SUM(gpu_count *v vram_per_gpu_gb) DESC, data node_datacenter_"
+        },
+        {
+          "id": "SQL07",
+          "error": "syntax: near \"ORDER\": syntax error",
+          "pred_sql": "SELECT \n_d\n, pod FROM inference_telemetry\nWHERE ORDER BY num_preemimations_delta DESC, waiting_queue_depth ASC\nLIMIT 5;"
+        },
+        {
+          "id": "SQL08",
+          "error": "syntax: near \"c_balance_usd\": syntax error",
+          "pred_sql": "SELECT \n tier, MIN(e c_balance_usd) FROMe organizations WHEREe e_balance_usd IS NOT NULLe GROUP BYe tier ORDER BYe tier ASC;"
+        },
+        {
+          "id": "SQL09",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT pod,, hourly_rate_usd\nFROM pod_deploy_table\nWHERE WHERE exit_code IS IS IS NULL AND AND allocated_gpus >= 1 AND AND ORDER BY hourly_rate_usd DESC, pod, pod\n ASC;"
+        },
+        {
+          "id": "SQL10",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \n tokens_generated_delta, , FROM inference_telemetryryy WHERE recorded_at >= '22211112211122 2 2 2 211 2 2 2 2 2Z' AND active_concurrency IS NOT NULL ORDER BY tokens_generated_delta ASC, by active_concurrency ASC;"
+        }
+      ]
+    },
+    {
+      "label": "BF16 + FP8 KV (TRITON_ATTN)",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "kv_cache_dtype": "fp8",
+      "extra_args": [
+        "--attention-backend",
+        "TRITON_ATTN"
+      ],
+      "enable_prefix_caching": true,
+      "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "gpu_mem_util": 0.29,
+      "concurrency": 16,
+      "kv_cache_gib": 11.44,
+      "kv_cache_tokens": 417792,
+      "max_conc_4k": 102.0,
+      "total_tasks": 50,
+      "succeeded_requests": 50,
+      "syntax_valid_count": 0,
+      "syntax_valid_pct": 0.0,
+      "exec_match_count": 0,
+      "exec_accuracy_pct": 0.0,
+      "category_accuracy_pct": {
+        "filter_null": 0.0,
+        "join_having": 0.0,
+        "case_ratio": 0.0,
+        "window_cte": 0.0
+      },
+      "throughput_tok_per_s": 847.44,
+      "ttft_p50_ms": 39.0,
+      "ttft_p99_ms": 509.3,
+      "tpot_p50_ms": 11.9,
+      "tpot_p99_ms": 35.1,
+      "wall_time_s": 12.93,
+      "failures_sample": [
+        {
+          "id": "SQL01",
+          "error": "syntax: near \"FROM\": syntax error",
+          "pred_sql": "SELECT org_name, FROM schema WHERE tier = ' ' ' ' '\nORDER BY credit credit credit_balance_usd,d USD ASC, ORDERBYp p org_name ASC\n``"
+        },
+        {
+          "id": "SQL02",
+          "error": "non_select_query",
+          "pred_sql": "< <>\nSELECT node_id, datacenter_region, interconnect_type, nvme_bandwidth_gbps \n FROM gpu_nodes WHERE WHERE WHERE where interconnect_type = ''nvme AND nvme_bandwidth_gbps > 0 nte 0 ORDER BY node a ASC;"
+        },
+        {
+          "id": "SQL03",
+          "error": "non_select_query",
+          "pred_sql": "< SELECT deployment_type, AS Deployment_Type, FROM (\n\n`` WHERE Deployments\n WHERE WHERE WHERE WHERE WHERE\nWHERE\n    terminated_at IS NULL\nGROUP BYBY\nBY\nBY\n    deployment_type\nORDERBY\n    deployment_type DESC,\n    deployment_type ASC;"
+        },
+        {
+          "id": "SQL04",
+          "error": "syntax: unrecognized token: \"\\\"",
+          "pred_sql": "SELECT \npod_de, \nCOALESCE(\\termination_reason,,,'STT STILLRUN\\) AS status_label\nFROM apha_deploymentsods\nWHERE org_id = 'org_id\nORDER BY podde ASC;"
+        },
+        {
+          "id": "SQL05",
+          "error": "syntax: near \"spot_pod\": syntax error",
+          "pred_sql": "SELECT DISTINCT container_image \n FROM aha_deploy\nWHERE deployment_type = ' ' spot_pod AND exit_code = 1\nORDER BY container_image ASC"
+        },
+        {
+          "id": "SQL06",
+          "error": "non_select_query",
+          "pred_sql": "< sql>\n not include prose\nSELECT \ndatacenter_region, SUM(v.gpu_vram_per_gpu_gb) AS total_vram_gb\nFROM gpu_nodes p p p p\nWHERE node_status != ' ''m maintenance_m\nGROUP BY datacenter_region\nORDERBY datacenter_region ASC, data_vram_gb DESC"
+        },
+        {
+          "id": "SQL07",
+          "error": "non_select_query",
+          "pred_sql": "< <\nSELECT \n \n FROM inference_telemetry\nORDER BY pftft_code_a_ms DESC, , , ASCLIMIT 55"
+        },
+        {
+          "id": "SQL08",
+          "error": "non_select_query",
+          "pred_sql": "< SELECT>\n FOR each tier in the `chema schema, compute the min,,,,, avg,,,, and max\\ balance of_usd_d for each tier ASC.\n\n Return tier, creditminena_balance1_usdena_balance1ve1\n\nSELECT \n tier,\n,\n       , MIN( (credit_balance_usd) AS minena_"
+        },
+        {
+          "id": "SQL09",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \npod_deployment,,,.,, allocated_gpus, hourly_rate_usd\nFROM ahapllicationcation_telemetry\nWHERE exit_code IS NULL\nANDOD allocated_gpus >=  e\nORDER BY BY hourly_rate_uS DESC, pod_deployment_do ASC;"
+        },
+        {
+          "id": "SQL10",
+          "error": "non_select_query",
+          "pred_sql": "<\nSELECT \nactive tokens_generated_delta, active_concurrency\nFROM inference_telemetry\nWHERE recorded recordeded_at >= '22611-1 p22611TT1\nORDER BYY active_concurrency ASC\nLIMIT 2 2222268p"
+        }
+      ]
+    },
+    {
+      "label": "AWQ 4-bit + FP8 KV (TRITON_ATTN)",
+      "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "kv_cache_dtype": "fp8",
+      "extra_args": [
+        "--attention-backend",
+        "TRITON_ATTN"
+      ],
+      "enable_prefix_caching": true,
+      "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "gpu_mem_util": 0.29,
+      "concurrency": 16,
+      "kv_cache_gib": 20.39,
+      "kv_cache_tokens": 751616,
+      "max_conc_4k": 183.5,
+      "total_tasks": 50,
+      "succeeded_requests": 50,
+      "syntax_valid_count": 0,
+      "syntax_valid_pct": 0.0,
+      "exec_match_count": 0,
+      "exec_accuracy_pct": 0.0,
+      "category_accuracy_pct": {
+        "filter_null": 0.0,
+        "join_having": 0.0,
+        "case_ratio": 0.0,
+        "window_cte": 0.0
+      },
+      "throughput_tok_per_s": 1101.91,
+      "ttft_p50_ms": 31.5,
+      "ttft_p99_ms": 523.5,
+      "tpot_p50_ms": 10.3,
+      "tpot_p99_ms": 35.0,
+      "wall_time_s": 12.26,
+      "failures_sample": [
+        {
+          "id": "SQL01",
+          "error": "syntax: near \"balance_balance_usd\": syntax error",
+          "pred_sql": "SELECT org_name, balance balance balance_balance_usd \n FROM organizations\n WHERE tier = 'enterprise' AND balance balance balance balance_balance_usd < 55000.0e SELECT * FROM o\n ORDER BY BY BY BY balance_balance_usd ASC, org_name ASC;"
+        },
+        {
+          "id": "SQL02",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT node_id,, datacenter_region,,, NVL_gpu4,,,, interconnect_type,,,, nvme_bandwidth_gbps\nFROM gpu_nodes\nORDER BY node runtime ASC;"
+        },
+        {
+          "id": "SQL03",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT deployment_type,, COUNT(*) FROM pod_deploytable WHERE terminated_at IS NULL GROUP GROUP BY deployment_type ORDER BY deployment_type DESC, ASC"
+        },
+        {
+          "id": "SQL04",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \npod,, org, \norg,, COALESCE(termination_reason,, 'STILL.RUNNING')\nFROM pod_deploytable\nWHERE\nORDER BY pod\n ASC;"
+        },
+        {
+          "id": "SQL05",
+          "error": "syntax: near \"spot_pod\": syntax error",
+          "pred_sql": "SELECT DISTINCT container_image \n FROM pod_deploy_table\n WHERE deployment_type = ' 'spot_pod' AND AND AND(terminated_at IS NOT NULL) AND exit_code = e 11 13)\n ORDER BY container_image ASC;"
+        },
+        {
+          "id": "SQL06",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT g node_status, 'maintenance',, gpu_nodes.data_center_region, SUM(gpu_nodes.gpu_count * gpu_nodes.vram_per_gpu_gb) AS do_vram_gb\nFROM gpu_nodes\nJOIN pod_deploytable ON gpu_nodes.node_id =pod_deploytable.node\nWHERE pod_deploytable.org "
+        },
+        {
+          "id": "SQL07",
+          "error": "syntax: near \"_d_ms\": syntax error",
+          "pred_sql": "SELECT \n\n telemetry_id\n, pod d\n, table_f\np_d_ms\n, table_f\n_d_ms\n\n_d_ms\n FROM inference_telemetry\n ORDER BY p\n_d_ms DESC, ,p_f_d_ms ASC LIMIT 5\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\np\n\np\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\np\n\n\n\np\n\n\n\n\n\n\n\n\n\n\n\n\n\np\n\n\n\n\np\n\n\n\n\n\n\n\np\n\n\n\n\n\n\n\n\n"
+        },
+        {
+          "id": "SQL08",
+          "error": "syntax: near \"table\": syntax error",
+          "pred_sql": "SELECT tier, min(c_balance_usd) as min_balance from organizations table group by tier order order order asc"
+        },
+        {
+          "id": "SQL09",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT pod,, hourly_rate_usd\nFROM pod_deploytable\nWHERE terminated_at IS NULL AND\n d WHERE p p.allocated_gpus > 1.e AND WHERE hourly_rate_usd >  e..0\n ORDER BY hourly_rate_usd DESC, pod.allocated_gpus ASC;"
+        },
+        {
+          "id": "SQL10",
+          "error": "syntax: near \"FROM\": syntax error",
+          "pred_sql": "SELECT \ntokens_generated_delta, FROM inference_telemetryry WHERE recorded_at >= '22221122 222e11111112 2111 e2 22 e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e e "
+        }
+      ]
+    },
+    {
+      "label": "BF16 + FP8 KV (FlashInfer, No PrefixCache)",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "kv_cache_dtype": "fp8",
+      "extra_args": [
+        "--attention-backend",
+        "FLASHINFER"
+      ],
+      "enable_prefix_caching": false,
+      "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "gpu_mem_util": 0.29,
+      "concurrency": 16,
+      "kv_cache_gib": 11.44,
+      "kv_cache_tokens": 382976,
+      "max_conc_4k": 93.5,
+      "total_tasks": 50,
+      "succeeded_requests": 49,
+      "syntax_valid_count": 0,
+      "syntax_valid_pct": 0.0,
+      "exec_match_count": 0,
+      "exec_accuracy_pct": 0.0,
+      "category_accuracy_pct": {
+        "filter_null": 0.0,
+        "join_having": 0.0,
+        "case_ratio": 0.0,
+        "window_cte": 0.0
+      },
+      "throughput_tok_per_s": 823.87,
+      "ttft_p50_ms": 71.7,
+      "ttft_p99_ms": 601.8,
+      "tpot_p50_ms": 14.7,
+      "tpot_p99_ms": 25.0,
+      "wall_time_s": 9.77,
+      "failures_sample": [
+        {
+          "id": "SQL01",
+          "error": "non_select_query",
+          "pred_sql": "< the correct <. sqlite 3 query\nSELECT org_name,S_balance_usd FROM schema\nGROUP BY org_name, tier\nORDERBY BY org_name, Doce_balance_usp ASC\n \\\n ``"
+        },
+        {
+          "id": "SQL02",
+          "error": "syntax: unrecognized token: \"'nvme\nORDER BY node_code ASC;\"",
+          "pred_sql": "SELECT node_id, interconnect_type, nvme_bandwidth_gbps\nFROM gpu_nodes\nWHERE interconnect_type = 'nvme\nORDER BY node_code ASC;"
+        },
+        {
+          "id": "SQL03",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \n deployment_type,, COUNT(*) AS current_deployments_count\nFROM a_deploy\nWHERE terminated_at IS NULL\nGROUP BY BY8 BY deployment_type\nORDERBYY od deployment_type ASC;"
+        },
+        {
+          "id": "SQL04",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \npod_de, \nCOALESCE((termination_reason,, 'STILL_RUNNING) AS status_label\nFROM aha_deploy\nWHERE org_id = 'org_id\nORDER BY pod_de ASC;"
+        },
+        {
+          "id": "SQL05",
+          "error": "syntax: unrecognized token: \"'pods\nAND AND AND (termination_reason IS NULL OR OR\n OR AND exit_code IS NULLp)\n GROUP BY BY BY BY BYBY container_image ASC;\"",
+          "pred_sql": "SELECT DISTINCT container_image \n FROM aha_deploy\nWHERE deployment_type = ' ' 'pods\nAND AND AND (termination_reason IS NULL OR OR\n OR AND exit_code IS NULLp)\n GROUP BY BY BY BY BYBY container_image ASC;"
+        },
+        {
+          "id": "SQL06",
+          "error": "syntax: near \"AS\": syntax error",
+          "pred_sql": "SELECT \nnode_data_center_region, SUM(a(v(gpu_vram_per_gpu_gpu_gb) AS total_vram_gb\nFROM gpu_nodes\nWHERE node_status != ''m't '\nGROUP BY adata_node_data_center_region\nORDERBY adata_vram_gb DESC, adata_node_data_center_region ASC;"
+        },
+        {
+          "id": "SQL07",
+          "error": "syntax: no such column: _deploy",
+          "pred_sql": "SELECT \n_deploy\nFROM inference_telemetry\nORDER BY waiting_queue_depth DESC, recorded_at ASC\nLIMIT 5;"
+        },
+        {
+          "id": "SQL08",
+          "error": "non_select_query",
+          "pred_sql": "< sql SELECT tier\n    SELECT \ntier, \n \navg_balance_usd\nFROM schema\nGROUP BY tier\nORDERBY tier ASC;"
+        },
+        {
+          "id": "SQL09",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \n\n    pod,, \n \n    hourly_rate_usd\nFROM\n   odod\nWHERE\n    exit_code IS NULL\n     AND\n    allocated_gpus >= ge 1\n AND AND\n    hourly_rate1_d > 0\n GROUP BY BY\n ORDER BY\n    pod0,,, ASC\n    ,, hourly_rate1d_d DESC;"
+        },
+        {
+          "id": "SQL10",
+          "error": "syntax: near \"recorded_at\": syntax error",
+          "pred_sql": "SELECT \ntelemetry_snap\nFROM inference_telemetry\nWHERE recorded\n    recorded_at >= >=TT '22222002TT-2 2 24\nORDER BY active_concurrency ASC;"
+        }
+      ]
+    },
+    {
+      "label": "BF16 + FP8 KV (FLASH_ATTN)",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "kv_cache_dtype": "fp8",
+      "extra_args": [
+        "--attention-backend",
+        "FLASH_ATTN"
+      ],
+      "status": "failed_to_start",
+      "log_tail": [
+        "    return cls(",
+        "           ^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 194, in __init__",
+        "    self.engine_core = EngineCoreClient.make_async_mp_client(",
+        "                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper",
+        "    return func(*args, **kwargs)",
+        "           ^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 183, in make_async_mp_client",
+        "    return AsyncMPClient(",
+        "           ^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper",
+        "    return func(*args, **kwargs)",
+        "           ^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 1195, in __init__",
+        "    super().__init__(",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 729, in __init__",
+        "    with launch_core_engines(",
+        "  File \"/usr/lib/python3.12/contextlib.py\", line 144, in __exit__",
+        "    next(self.gen)",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1393, in launch_core_engines",
+        "    wait_for_engine_startup(",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1477, in wait_for_engine_startup",
+        "    raise RuntimeError(",
+        "RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      ]
+    },
+    {
+      "label": "AWQ 4-bit + FP8 KV (FLASH_ATTN)",
+      "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "kv_cache_dtype": "fp8",
+      "extra_args": [
+        "--attention-backend",
+        "FLASH_ATTN"
+      ],
+      "status": "failed_to_start",
+      "log_tail": [
+        "    return cls(",
+        "           ^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 194, in __init__",
+        "    self.engine_core = EngineCoreClient.make_async_mp_client(",
+        "                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper",
+        "    return func(*args, **kwargs)",
+        "           ^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 183, in make_async_mp_client",
+        "    return AsyncMPClient(",
+        "           ^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper",
+        "    return func(*args, **kwargs)",
+        "           ^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 1195, in __init__",
+        "    super().__init__(",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 729, in __init__",
+        "    with launch_core_engines(",
+        "  File \"/usr/lib/python3.12/contextlib.py\", line 144, in __exit__",
+        "    next(self.gen)",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1393, in launch_core_engines",
+        "    wait_for_engine_startup(",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1477, in wait_for_engine_startup",
+        "    raise RuntimeError(",
+        "RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      ]
+    },
+    {
+      "label": "BF16 + FP8_E5M2 KV (TRITON_ATTN)",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "kv_cache_dtype": "fp8_e5m2",
+      "extra_args": [
+        "--attention-backend",
+        "TRITON_ATTN"
+      ],
+      "status": "failed_to_start",
+      "log_tail": [
+        "    return cls(",
+        "           ^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 194, in __init__",
+        "    self.engine_core = EngineCoreClient.make_async_mp_client(",
+        "                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper",
+        "    return func(*args, **kwargs)",
+        "           ^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 183, in make_async_mp_client",
+        "    return AsyncMPClient(",
+        "           ^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper",
+        "    return func(*args, **kwargs)",
+        "           ^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 1195, in __init__",
+        "    super().__init__(",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 729, in __init__",
+        "    with launch_core_engines(",
+        "  File \"/usr/lib/python3.12/contextlib.py\", line 144, in __exit__",
+        "    next(self.gen)",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1393, in launch_core_engines",
+        "    wait_for_engine_startup(",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1477, in wait_for_engine_startup",
+        "    raise RuntimeError(",
+        "RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      ]
+    },
+    {
+      "label": "AWQ 4-bit + FP8_E5M2 KV (TRITON_ATTN)",
+      "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "kv_cache_dtype": "fp8_e5m2",
+      "extra_args": [
+        "--attention-backend",
+        "TRITON_ATTN"
+      ],
+      "status": "failed_to_start",
+      "log_tail": [
+        "    return cls(",
+        "           ^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py\", line 194, in __init__",
+        "    self.engine_core = EngineCoreClient.make_async_mp_client(",
+        "                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper",
+        "    return func(*args, **kwargs)",
+        "           ^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 183, in make_async_mp_client",
+        "    return AsyncMPClient(",
+        "           ^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/tracing/otel.py\", line 175, in sync_wrapper",
+        "    return func(*args, **kwargs)",
+        "           ^^^^^^^^^^^^^^^^^^^^^",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 1195, in __init__",
+        "    super().__init__(",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/core_client.py\", line 729, in __init__",
+        "    with launch_core_engines(",
+        "  File \"/usr/lib/python3.12/contextlib.py\", line 144, in __exit__",
+        "    next(self.gen)",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1393, in launch_core_engines",
+        "    wait_for_engine_startup(",
+        "  File \"/tmp/vllm_venv/lib/python3.12/site-packages/vllm/v1/engine/utils.py\", line 1477, in wait_for_engine_startup",
+        "    raise RuntimeError(",
+        "RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+      ]
+    },
+    {
+      "label": "BF16 + FP8_PER_TOKEN_HEAD KV",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "kv_cache_dtype": "fp8_per_token_head",
+      "extra_args": [],
+      "enable_prefix_caching": true,
+      "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+      "gpu_mem_util": 0.29,
+      "concurrency": 16,
+      "kv_cache_gib": 11.44,
+      "kv_cache_tokens": 405120,
+      "max_conc_4k": 98.91,
+      "total_tasks": 50,
+      "succeeded_requests": 50,
+      "syntax_valid_count": 0,
+      "syntax_valid_pct": 0.0,
+      "exec_match_count": 0,
+      "exec_accuracy_pct": 0.0,
+      "category_accuracy_pct": {
+        "filter_null": 0.0,
+        "join_having": 0.0,
+        "case_ratio": 0.0,
+        "window_cte": 0.0
+      },
+      "throughput_tok_per_s": 823.93,
+      "ttft_p50_ms": 41.5,
+      "ttft_p99_ms": 572.2,
+      "tpot_p50_ms": 12.5,
+      "tpot_p99_ms": 37.4,
+      "wall_time_s": 11.54,
+      "failures_sample": [
+        {
+          "id": "SQL01",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT org_name,\n      ,_balance_usd \n\nFROM `\nWHERE tier = 'g' AND\nORDER BY 1_balance_us all DESC,\n org_name ASC"
+        },
+        {
+          "id": "SQL02",
+          "error": "syntax: near \"healthy\": syntax error",
+          "pred_sql": "SELECT node_node, node, node', data_datacenter_region FROM gpu_nodes WHERE status = 'healthy' AND AND_interconnect_type = 'NVLink' AND and nvme_bandwidth_gbps >= 7"
+        },
+        {
+          "id": "SQL03",
+          "error": "syntax: near \"ORDER\": syntax error",
+          "pred_sql": "SELECT \n_type, COUNT(*)\nFROM c_deploy\nWHERE terminated_at IS NULL\nGROUP BY deployment_type,\nORDER BY count_type DESC,_type ASC;"
+        },
+        {
+          "id": "SQL04",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \n,,,,,,, FROM 'status_label' = CASE when when when when WHEN terminatedat IS NULL THEN 'STILL_RUNNING' ELSE 'TER"
+        },
+        {
+          "id": "SQL05",
+          "error": "syntax: near \"AND\": syntax error",
+          "pred_sql": "SELECT DISTINCT container_image\nFROM c_deploy\nWHERE deployment_type = 'spotPod' AND AND AND AND terminatedat IS NOT NULL AND AND AND exit_code = 77\nORDER BY container_image;"
+        },
+        {
+          "id": "SQL06",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \n data_datacenter_region,,_vram_gb = SUM(ggpu_count_count_count_count_gpu_count * gpu_all_all_vram_per_gpu_gb)\nFROM gpu_nodes\nWHERE gpu_all_all_status != 'healthy'\nGROUP BY gpu_all_all_datacenter_region\nORDER BY gpu_all_all_vram_gb D"
+        },
+        {
+          "id": "SQL07",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \n telemetry_id,,,,,,,,(),,(),,(),,,,(),,(),,(),(),\n FROM recordedat,,(),\n ,, c t\n ,,(), \n allocated g p p p_ms(),\n ,d tt p t_m_ms(),()\n ORDER BY\n  wait_queue_depth DESC,\n  recorded_at ASC\nLIMIT 1;"
+        },
+        {
+          "id": "SQL08",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \nier,,.t,,,,,_tier,,,,,\nFROM (\n    SELECT tier,,,,,_balance_usd AS avg_balance\n            FROM"
+        },
+        {
+          "id": "SQL09",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT d_pod.deployment_id,,.,,,,,,,,,,,,_allocated_gpus,,,,_allocated_gpus),,,,_hourly_rate_usst FROM hourly_rate_usd\nFROM al_pod\nJOIN c ON al al.deployment_org = c.org.org\no\nWHERE al_pod.deployment_type_type = 'on_demandemand POD' AND\n AN"
+        },
+        {
+          "id": "SQL10",
+          "error": "syntax: near \",\": syntax error",
+          "pred_sql": "SELECT \n_snapshot,,_all_concurrency,,tokens_generated_delta\nFROM inference_telemetry\nWHERE record_concurrency >= strftime('%Y-%m2 % % %T 2 % 2 % 2 % 2 2 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1  2 2  1  2  1  2  1  1  2  2  1  1  1  "
+        }
+      ]
+    }
+  ]
+}
