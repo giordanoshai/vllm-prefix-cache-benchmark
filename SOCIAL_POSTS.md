@@ -237,3 +237,55 @@ Zero-oracle SQLite self-healing benchmark, raw L4 JSON telemetry, and plotting s
 https://github.com/giordanoshai/vllm-prefix-cache-benchmark
 ```
 
+---
+
+## Option 5: Part 4 Follow-Up Post (The Speculative Decoding Concurrency Crossover on NVIDIA L4: +82% at c=4 → -14% Reversal at c=32)
+
+### LinkedIn Post (Short & Punchy — Yimin Signature Style)
+*(Attach `charts/chart_l4_speculative_decoding_crossover.png`)*
+
+```text
+Many teams treat Speculative Decoding in vLLM as a free "2x speedup switch."
+
+It isn't. It trades idle Tensor Core FLOPs for fewer memory-bandwidth reads—which means at high concurrency, it reverses and actually makes your server slower.
+
+To find the exact crossover point on an NVIDIA L4 (24GB, SM 8.9), I benchmarked Qwen2.5-7B-AWQ across c = 1, 2, 4, 8, 16, 32 on vLLM 0.34.0, comparing Standard Decoding against N-gram Prompt-Lookup Speculative Decoding (k=3 and k=5 draft tokens).
+
+Here is what happened as concurrency scaled:
+• c = 1..4 (Memory-Bandwidth-Bound): Speculative Decoding (k=5) delivered up to +82.2% higher throughput (208.6 vs 114.5 tok/s at c=4) and cut TPOT P50 by 43.5% (31.0ms → 17.5ms).
+• c = 16 (The Inflection Point): Even though acceptance rate stayed constant at 1.67 tokens/step, k=5 (verifying 16×6 = 96 tokens/step) hit the L4's compute ceiling. Its TPOT P99 jumped to 41.3ms (26.7% worse than standard decode's 32.6ms), while k=3 (16×4 = 64 tokens/step) still held a +44.7% lead (513.9 tok/s).
+• c = 32 (Full Inversion): k=5 verified 32×6 = 192 tokens/step with 72% wasted verification FLOPs. Total throughput dropped -14.1% below standard decoding (510.5 vs 594.4 tok/s), TPOT P50 degraded by +49.8% (49.3ms vs 32.9ms), and TPOT P99 blew up by +85.5% (63.8ms vs 34.4ms). Even k=3 breached the 45ms TPOT SLA (47.2ms).
+
+Two production rules for Speculative Decoding on L4:
+1. For low-concurrency interactive agents (c <= 8), k=5 gives a massive 1.7x–1.8x speedup with zero extra VRAM.
+2. For medium concurrency (c = 12..16), drop speculative depth to k=3; above c >= 20, turn speculative decoding off.
+
+Benchmark script (with stream_options.include_usage exact token accounting) & raw L4 logs: https://github.com/giordanoshai/vllm-prefix-cache-benchmark
+
+#vLLM #LLMInference #GPU #AIInfrastructure #PerformanceEngineering
+```
+
+### X (Twitter) Version (Main Post + Self-Reply with Link)
+
+**Tweet 1 (Attach `charts/chart_l4_speculative_decoding_crossover.png`, NO external link in Tweet 1):**
+```text
+Many teams treat Speculative Decoding as a free "2x speedup switch."
+
+It isn't. At high concurrency, verification FLOPs saturate the GPU and make latency worse than standard decoding.
+
+I swept c = 1, 2, 4, 8, 16, 32 on an NVIDIA L4 (24GB) running Qwen2.5-7B-AWQ (@vllm_project 0.34.0) with N-gram Speculative Decoding (k=3 and k=5):
+
+• c = 1..4 (Memory-BW bound): k=5 boosts throughput by +82.2% (209 vs 115 tok/s) and cuts TPOT P50 by 43.5% (31.0ms → 17.5ms).
+• c = 16 (Inflection): Acceptance stays 1.67 tok/step, yet k=5 (16×6 = 96 verified tok/step) saturates compute—TPOT P99 is already 27% worse than standard decode (41.3ms vs 32.6ms), while k=3 still leads by +44.7% (514 tok/s).
+• c = 32 (Full Inversion): k=5 verifies 192 tok/step (72% wasted FLOPs). Throughput drops -14.1% below standard decode (511 vs 594 tok/s) and TPOT P99 degrades by +85.5% (63.8ms vs 34.4ms).
+
+Rule on L4: use k=5 at c<=8, drop to k=3 at c=16, and disable speculative decoding at c>=20. 👇
+```
+
+**Tweet 2 (Reply to Tweet 1 with the GitHub link):**
+```text
+18-point concurrency crossover benchmark (using stream_options.include_usage for exact multi-token verification accounting), raw L4 JSON, and plotting scripts:
+https://github.com/giordanoshai/vllm-prefix-cache-benchmark
+```
+
+

@@ -201,3 +201,64 @@ python research-vllm-benchmark/sql_self_healing_eval.py --run-suite --concurrenc
 # 3. Generate the Part 3 dual-panel comparison chart
 python research-vllm-benchmark/plot_self_healing_part3.py
 ```
+
+---
+
+## 7. Part 4: The Speculative Decoding Concurrency Crossover on NVIDIA L4 (`c = 1..32`)
+
+A common misconception in production LLM serving is that **Speculative Decoding** is a free "2x speedup switch" at any traffic load. In reality, speculative verification trades **idle Tensor Core FLOPs** for **fewer memory-bandwidth reads**—which means it undergoes a sharp **Roofline Inversion** as concurrency increases.
+
+To measure the exact crossover concurrency (`c*`) on an **NVIDIA L4 (24GB, Ada Lovelace SM 8.9)**, I built [spec_decoding_crossover_eval.py](spec_decoding_crossover_eval.py) using `stream_options={"include_usage": True}` (ensuring exact tokenizer-verified `completion_tokens` and `TPOT` across multi-token speculative verification bursts) and swept `c = 1, 2, 4, 8, 16, 32` on `Qwen/Qwen2.5-7B-Instruct-AWQ` across three configurations (raw JSON: [results_l4_spec_decoding.json](results_l4_spec_decoding.json)):
+1. **Standard Autoregressive Decode (Baseline)** (`1.006 tokens/step`)
+2. **Speculative Decoding (`N-gram Prompt Lookup`, `k=3`, `prompt_lookup_max=4`)** (`~1.61 tokens/step`)
+3. **Speculative Decoding (`N-gram Prompt Lookup`, `k=5`, `prompt_lookup_max=4`)** (`~1.69 tokens/step`)
+
+![Speculative Decoding Concurrency Crossover on NVIDIA L4](charts/chart_l4_speculative_decoding_crossover.png)
+
+### 7.1 Concurrency Sweep Table (`NVIDIA L4 24GB`, `vLLM 0.34.0`, `Qwen2.5-7B-Instruct-AWQ`)
+
+| Concurrency | Mode | Accepted Tok / Step | Throughput (tok/s) | Speedup vs. Std | TPOT P50 (ms/tok) | TPOT P99 (ms/tok) | E2E Latency P50 (ms) | SQLite Exec Match |
+|---:|---|---:|---:|---:|---:|---:|---:|---:|
+| **`c = 1`** | **Standard Autoregressive** | `1.006` | `31.98` | `1.00x` | `31.0` | `31.4` | `5,288.8` | `43.8%` |
+| **`c = 1`** | **Speculative N-gram (`k=3`)** | `1.622` | `54.62` | **`+70.8%`** | **`18.0`** *(-41.9%)* | `21.8` | `3,228.2` | `43.8%` |
+| **`c = 1`** | **Speculative N-gram (`k=5`)** | `1.700` | **`56.73`** | **`+77.4%`** | **`17.5`** *(-43.5%)* | **`21.9`** | **`3,048.4`** *(-42.4%)* | `43.8%` |
+| **`c = 2`** | **Standard Autoregressive** | `1.005` | `61.04` | `1.00x` | `31.1` | `31.6` | `5,305.2` | `43.8%` |
+| **`c = 2`** | **Speculative N-gram (`k=3`)** | `1.637` | `102.97` | **`+68.7%`** | `18.3` | `22.2` | `3,277.4` | `43.8%` |
+| **`c = 2`** | **Speculative N-gram (`k=5`)** | `1.700` | **`108.94`** | **`+78.5%`** | **`17.6`** | **`21.5`** | **`3,063.6`** | `43.8%` |
+| **`c = 4`** | **Standard Autoregressive** | `1.006` | `114.51` | `1.00x` | `31.5` | `31.9` | `5,383.6` | `43.8%` |
+| **`c = 4`** | **Speculative N-gram (`k=3`)** | `1.637` | `196.81` | **`+71.9%`** | `18.5` | `22.3` | `3,297.2` | `43.8%` |
+| **`c = 4`** | **Speculative N-gram (`k=5`)** | `1.722` | **`208.60`** | **`+82.2%` (Peak)** | **`17.7`** | **`21.8`** | **`3,162.4`** | `43.8%` |
+| **`c = 8`** | **Standard Autoregressive** | `1.006` | `219.24` | `1.00x` | `31.5` | `31.9` | `5,236.0` | `50.0%` |
+| **`c = 8`** | **Speculative N-gram (`k=3`)** | `1.604` | `364.27` | **`+66.2%`** | `19.3` | **`22.9`** | `3,306.4` | `50.0%` |
+| **`c = 8`** | **Speculative N-gram (`k=5`)** | `1.671` | **`366.40`** | **`+67.1%`** | **`18.9`** | `24.3` | **`3,256.1`** | `50.0%` |
+| **`c = 16`** | **Standard Autoregressive** | `1.006` | `355.20` | `1.00x` | `32.1` | `32.6` | `5,417.5` | `50.0%` |
+| **`c = 16`** | **Speculative N-gram (`k=3`)** | `1.600` | **`513.94`** | **`+44.7%`** | **`24.2`** | **`29.9`** | **`4,258.1`** | `50.0%` |
+| **`c = 16`** | **Speculative N-gram (`k=5`)** | `1.671` | `431.79` | `+21.6%` | `31.7` *(crossover)* | **`41.3` (+26.7% worse)** | `5,147.7` | `50.0%` |
+| **`c = 32`** | **Standard Autoregressive** | `1.006` | **`594.42`** | **`1.00x`** | **`32.9`** | **`34.4` (PASS)** | **`5,642.9`** | `50.0%` |
+| **`c = 32`** | **Speculative N-gram (`k=3`)** | `1.597` | `601.75` | `+1.2%` | **`40.2` (+22.2% worse)** | **`47.2` (SLA FAIL)** | `6,930.5` *(+22.8%)* | `50.0%` |
+| **`c = 32`** | **Speculative N-gram (`k=5`)** | `1.671` | **`510.54`** | **`-14.1%` (Slower)** | **`49.3` (+49.8% worse)** | **`63.8` (+85.5% worse)** | **`8,380.4` (+48.5%)** | `50.0%` |
+
+### 7.2 Key Takeaways from Part 4
+
+1. **Why Speculative Decoding Reverses Above `c* ≈ 16–22` Even When Acceptance Rate Never Drops**:
+   - Look closely at the `Accepted Tok / Step` column for `k=5`: it stays rock-solid at **`1.671 tokens/step`** across `c=8`, `c=16`, and `c=32`. The n-gram acceptance rate did **not** degrade at high concurrency!
+   - Why, then, did `k=5` swing from a **`+82.2%` speedup at `c=4`** (`TPOT P50 = 17.7 ms`) to a **`-14.1%` throughput loss and `+85.5%` worse P99 TPOT (`63.8 ms vs 34.4 ms`) at `c=32`**?
+   - **Roofline Arithmetic Intensity Transition**: At `c=1..4`, standard decoding verifies only `1..4` tokens per forward pass and is 100% **Memory-Bandwidth-Bound** on L4's `300 GB/s` GDDR6 bus; verifying `k+1 = 6` tokens per sequence (`4 × 6 = 24` tokens total) uses otherwise-idle Tensor Core FLOPs for free. At `c=32`, however, `k=5` forces every forward pass to evaluate **`32 × 6 = 192` tokens per step**—pushing the L4 deep into the **Compute-Bound** regime where **72% of the verification FLOPs (`4.33` rejected tokens out of `6` verified) directly stall all 32 active requests**!
+2. **Smaller Speculative Depth (`k=3`) Extends the Crossover Horizon vs. `k=5`**:
+   - At `c=16`, `k=5` (`16 × 6 = 96` tokens/step) has already hit the compute ceiling (`TPOT P50 = 31.7 ms`, `P99 = 41.3 ms`), whereas `k=3` (`16 × 4 = 64` tokens/step) still delivers **`+44.7%` higher throughput (`513.9 vs 355.2 tok/s`)** and **`24.2 ms` TPOT P50**.
+   - By `c=32` (`32 × 4 = 128` tokens/step), even `k=3` crosses over: its throughput gain vanishes (`+1.2%`) while its `TPOT P50` (`40.2 ms` vs `32.9 ms`) and `TPOT P99` (`47.2 ms` vs `34.4 ms`) fall behind standard decoding.
+3. **Mathematically Lossless Verification Confirmed**:
+   - At every concurrency level (`c=1..32`), SQLite execution accuracy was bit-for-bit identical across `Standard`, `k=3`, and `k=5` (`43.8%` on the 16-task subset, `50.0%` on the 32-task subset with the added `<audit>` block).
+
+### Reproducing Part 4
+
+```bash
+# 1. Validate the 32-task balanced subset & SpeculativeConfig JSON builder locally
+python research-vllm-benchmark/spec_decoding_crossover_eval.py --validate-local
+
+# 2. Run the 18-point concurrency crossover sweep (c=1..32 x 3 decoding modes) on NVIDIA L4
+python research-vllm-benchmark/spec_decoding_crossover_eval.py --run-sweep --out research-vllm-benchmark/results_l4_spec_decoding.json
+
+# 3. Generate the Part 4 dual-panel crossover chart
+python research-vllm-benchmark/plot_spec_decoding_part4.py
+```
