@@ -1,0 +1,737 @@
+{
+  "gpu": "NVIDIA L4",
+  "concurrency": 16,
+  "num_tasks": 50,
+  "results": [
+    {
+      "status": "ok",
+      "label": "Qwen2.5-7B-AWQ (W4A16 + FP16 KV)",
+      "model": "Qwen/Qwen2.5-7B-Instruct-AWQ",
+      "kv_cache_dtype": "auto",
+      "extra_args": [],
+      "gpu": "NVIDIA L4",
+      "gpu_mem_util": 0.85,
+      "max_model_len": 4096,
+      "concurrency": 16,
+      "kv_cache_gib": 12.93,
+      "kv_cache_tokens": 235520,
+      "max_conc_4k": 57.5,
+      "total_tasks": 50,
+      "wall_time_s": 33.68,
+      "overall_throughput_tok_per_s": 284.72,
+      "turn0_0shot": {
+        "retry_budget": 0,
+        "syntax_valid_count": 40,
+        "syntax_valid_pct": 80.0,
+        "exec_match_count": 30,
+        "exec_accuracy_pct": 60.0,
+        "category_accuracy_pct": {
+          "filter_null": 100.0,
+          "join_having": 73.3,
+          "case_ratio": 40.0,
+          "window_cte": 33.3
+        },
+        "retried_tasks_count": 0,
+        "healed_tasks_count": 0,
+        "healed_examples": [],
+        "total_output_tokens": 5539,
+        "turn0_ttft_p50_ms": 113.6,
+        "turn0_ttft_p99_ms": 563.9,
+        "retry_ttft_p50_ms": 0.0,
+        "retry_ttft_p99_ms": 0.0,
+        "tpot_p50_ms": 34.8,
+        "tpot_p99_ms": 40.6,
+        "task_e2e_p50_ms": 3931.0,
+        "task_e2e_p99_ms": 8375.2
+      },
+      "turn1_1retry": {
+        "retry_budget": 1,
+        "syntax_valid_count": 43,
+        "syntax_valid_pct": 86.0,
+        "exec_match_count": 33,
+        "exec_accuracy_pct": 66.0,
+        "category_accuracy_pct": {
+          "filter_null": 100.0,
+          "join_having": 80.0,
+          "case_ratio": 40.0,
+          "window_cte": 46.7
+        },
+        "retried_tasks_count": 13,
+        "healed_tasks_count": 3,
+        "healed_examples": [
+          {
+            "id": "SQL18",
+            "turn0_reason": "empty_result_set",
+            "turn0_sql": "SELECT g.datacenter_region, SUM(i.num_preemptions_delta) AS total_preemptions\nFROM gpu_nodes g\nJOIN inference_telemetry i ON g.node_id = i.pod_id\nWHERE i.recorded_at >= '2026-11-11",
+            "healed_turn": 1,
+            "healed_sql": "SELECT g.datacenter_region, SUM(i.num_preemptions_delta) AS total_preemptions\nFROM gpu_nodes g\nJOIN pod_deployments p ON g.node_id = p.node_id\nJOIN inference_telemetry i ON p.pod_i"
+          },
+          {
+            "id": "SQL42",
+            "turn0_reason": "sqlite_error: no such column: g.gpu_model",
+            "turn0_sql": "WITH telemetry_data AS (\n    SELECT \n        g.gpu_model,\n        t.active_concurrency,\n        t.waiting_queue_depth,\n        t.kv_cache_usage_pct,\n        t.prefix_cache_hit_rate",
+            "healed_turn": 1,
+            "healed_sql": "WITH telemetry_data AS (\n    SELECT \n        pod_deployments.node_id,\n        pod_deployments.hourly_rate_usd,\n        inference_telemetry.telemetry_id,\n        inference_telemetry"
+          },
+          {
+            "id": "SQL49",
+            "turn0_reason": "sqlite_error: no such column: pd.recorded_at",
+            "turn0_sql": "SELECT \n    pd.pod_id, \n    o.tier, \n    gn.gpu_model, \n    SUM(pd.num_preemptions_delta) OVER (PARTITION BY pd.pod_id ORDER BY pd.recorded_at DESC ROWS BETWEEN UNBOUNDED PRECEDING",
+            "healed_turn": 1,
+            "healed_sql": "SELECT \n    it.pod_id, \n    o.tier, \n    gn.gpu_model, \n    SUM(it.num_preemptions_delta) AS preemptions_24h\nFROM \n    inference_telemetry it\nJOIN \n    pod_deployments pd ON it.pod"
+          }
+        ],
+        "total_output_tokens": 7997,
+        "turn0_ttft_p50_ms": 113.6,
+        "turn0_ttft_p99_ms": 563.9,
+        "retry_ttft_p50_ms": 144.3,
+        "retry_ttft_p99_ms": 212.5,
+        "tpot_p50_ms": 34.7,
+        "tpot_p99_ms": 39.9,
+        "task_e2e_p50_ms": 4247.1,
+        "task_e2e_p99_ms": 17767.6
+      },
+      "turn2_2retries": {
+        "retry_budget": 2,
+        "syntax_valid_count": 45,
+        "syntax_valid_pct": 90.0,
+        "exec_match_count": 33,
+        "exec_accuracy_pct": 66.0,
+        "category_accuracy_pct": {
+          "filter_null": 100.0,
+          "join_having": 80.0,
+          "case_ratio": 40.0,
+          "window_cte": 46.7
+        },
+        "retried_tasks_count": 13,
+        "healed_tasks_count": 3,
+        "healed_examples": [
+          {
+            "id": "SQL18",
+            "turn0_reason": "empty_result_set",
+            "turn0_sql": "SELECT g.datacenter_region, SUM(i.num_preemptions_delta) AS total_preemptions\nFROM gpu_nodes g\nJOIN inference_telemetry i ON g.node_id = i.pod_id\nWHERE i.recorded_at >= '2026-11-11",
+            "healed_turn": 1,
+            "healed_sql": "SELECT g.datacenter_region, SUM(i.num_preemptions_delta) AS total_preemptions\nFROM gpu_nodes g\nJOIN pod_deployments p ON g.node_id = p.node_id\nJOIN inference_telemetry i ON p.pod_i"
+          },
+          {
+            "id": "SQL42",
+            "turn0_reason": "sqlite_error: no such column: g.gpu_model",
+            "turn0_sql": "WITH telemetry_data AS (\n    SELECT \n        g.gpu_model,\n        t.active_concurrency,\n        t.waiting_queue_depth,\n        t.kv_cache_usage_pct,\n        t.prefix_cache_hit_rate",
+            "healed_turn": 1,
+            "healed_sql": "WITH telemetry_data AS (\n    SELECT \n        pod_deployments.node_id,\n        pod_deployments.hourly_rate_usd,\n        inference_telemetry.telemetry_id,\n        inference_telemetry"
+          },
+          {
+            "id": "SQL49",
+            "turn0_reason": "sqlite_error: no such column: pd.recorded_at",
+            "turn0_sql": "SELECT \n    pd.pod_id, \n    o.tier, \n    gn.gpu_model, \n    SUM(pd.num_preemptions_delta) OVER (PARTITION BY pd.pod_id ORDER BY pd.recorded_at DESC ROWS BETWEEN UNBOUNDED PRECEDING",
+            "healed_turn": 1,
+            "healed_sql": "SELECT \n    it.pod_id, \n    o.tier, \n    gn.gpu_model, \n    SUM(it.num_preemptions_delta) AS preemptions_24h\nFROM \n    inference_telemetry it\nJOIN \n    pod_deployments pd ON it.pod"
+          }
+        ],
+        "total_output_tokens": 9589,
+        "turn0_ttft_p50_ms": 113.6,
+        "turn0_ttft_p99_ms": 563.9,
+        "retry_ttft_p50_ms": 140.4,
+        "retry_ttft_p99_ms": 278.0,
+        "tpot_p50_ms": 34.6,
+        "tpot_p99_ms": 39.5,
+        "task_e2e_p50_ms": 4247.1,
+        "task_e2e_p99_ms": 22866.2
+      },
+      "remaining_failures": [
+        {
+          "id": "SQL14",
+          "final_turn": 2,
+          "eval_error": "syntax: no such column: t.org_id",
+          "verifier_reason": "sqlite_error: no such column: t.org_id",
+          "pred_sql": "SELECT DISTINCT t.pod_id, o.org_name\nFROM inference_telemetry t\nJOIN organizations o ON t.org_id = o.org_id\nJOIN pod_deployments p ON t.pod_id = p.pod_id\nWHERE p.deployment_type = 'serverless_worker'\n"
+        },
+        {
+          "id": "SQL15",
+          "final_turn": 2,
+          "eval_error": "syntax: no such function: it",
+          "verifier_reason": "sqlite_error: no such function: it",
+          "pred_sql": "SELECT \n    pd.pod_id, \n    gn.gpu_model, \n    MAX(it(kv_cache_usage_pct)) AS max_kv_pct\nFROM \n    pod_deployments pd\nJOIN \n    gpu_nodes gn ON pd.node_id = gn.node_id\nLEFT JOIN \n    inference_telemet"
+        },
+        {
+          "id": "SQL20",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 17 rows vs gt 4 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    o.tier,\n    COUNT(DISTINCT p.pod_id) AS active_pods,\n    SUM(i.tokens_generated_delta) AS tokens_24h\nFROM \n    organizations o\nJOIN \n    pod_deployments p ON o.org_id = p.org_id\nLEFT JOIN "
+        },
+        {
+          "id": "SQL26",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 3 rows vs gt 3 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    deployment_type,\n    COUNT(*) AS total_pods,\n    CAST(SUM(CASE WHEN exit_code = 137 THEN 1 ELSE 0 END) AS REAL) * 100 / COUNT(*) AS oom_pct\nFROM \n    pod_deployments\nWHERE \n    terminated_"
+        },
+        {
+          "id": "SQL27",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 3 rows vs gt 6 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    active_concurrency,\n    COUNT(*) AS total_snapshots,\n    CAST(SUM(CASE WHEN ttft_p99_ms >= 800.0 OR tpot_p99_ms >= 45.0 THEN 1 ELSE 0 END) AS REAL) * 100.0 / COUNT(*) AS sla_violation_pct\n"
+        },
+        {
+          "id": "SQL29",
+          "final_turn": 2,
+          "eval_error": "syntax: no such column: i_kv_cache_usage_pct",
+          "verifier_reason": "sqlite_error: no such column: i_kv_cache_usage_pct",
+          "pred_sql": "SELECT \n    g.datacenter_region,\n    COUNT(CASE WHEN i_kv_cache_usage_pct > 92.0 AND i_num_preemptions_delta > 0 THEN 1 END) AS pressure_count,\n    COUNT(*) AS total_count\nFROM \n    inference_telemetr"
+        },
+        {
+          "id": "SQL31",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 1 rows vs gt 2 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    prefix_caching_enabled,\n    AVG(hit_rate) AS avg_hit_rate,\n    AVG(ttft) AS avg_ttft_p50\nFROM (\n    SELECT \n        CASE \n            WHEN json_extract(vllm_args, '$.enable_prefix_caching'"
+        },
+        {
+          "id": "SQL32",
+          "final_turn": 2,
+          "eval_error": "exec: malformed JSON",
+          "verifier_reason": "sqlite_error: malformed JSON",
+          "pred_sql": "SELECT \n    json_extract(telemetry.pod_id, '$.vllm_args') AS kv_cache_dtype,\n    AVG(telemetry.kv_cache_usage_pct) AS avg_kv_usage,\n    SUM(telemetry.num_preemptions_delta) AS total_preemptions\nFROM \n"
+        },
+        {
+          "id": "SQL33",
+          "final_turn": 2,
+          "eval_error": "mismatch (got 4 rows vs gt 4 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    g.gpu_model,\n    COUNT(t.telemetry_id) AS queued_snapshots,\n    100.0 * COUNT(CASE WHEN t.waiting_queue_depth > 0 THEN t.telemetry_id END) / COUNT(t.telemetry_id) AS queuing_pct\nFROM \n    "
+        },
+        {
+          "id": "SQL36",
+          "final_turn": 2,
+          "eval_error": "syntax: misuse of window function DENSE_RANK()",
+          "verifier_reason": "sqlite_error: misuse of window function DENSE_RANK()",
+          "pred_sql": "SELECT \n    o.tier,\n    o.org_name,\n    SUM(i.tokens_generated_delta) AS total_tokens,\n    DENSE_RANK() OVER (PARTITION BY o.tier ORDER BY SUM(i.tokens_generated_delta) DESC) AS tier_rank\nFROM \n    or"
+        }
+      ]
+    },
+    {
+      "status": "ok",
+      "label": "Qwen2.5-7B-FP8 (W8A8 Linear + FP16 KV)",
+      "model": "Qwen/Qwen2.5-7B-Instruct",
+      "kv_cache_dtype": "auto",
+      "extra_args": [
+        "--quantization",
+        "fp8"
+      ],
+      "gpu": "NVIDIA L4",
+      "gpu_mem_util": 0.85,
+      "max_model_len": 4096,
+      "concurrency": 16,
+      "kv_cache_gib": 9.91,
+      "kv_cache_tokens": 178176,
+      "max_conc_4k": 43.5,
+      "total_tasks": 50,
+      "wall_time_s": 40.88,
+      "overall_throughput_tok_per_s": 209.93,
+      "turn0_0shot": {
+        "retry_budget": 0,
+        "syntax_valid_count": 41,
+        "syntax_valid_pct": 82.0,
+        "exec_match_count": 34,
+        "exec_accuracy_pct": 68.0,
+        "category_accuracy_pct": {
+          "filter_null": 100.0,
+          "join_having": 73.3,
+          "case_ratio": 50.0,
+          "window_cte": 53.3
+        },
+        "retried_tasks_count": 0,
+        "healed_tasks_count": 0,
+        "healed_examples": [],
+        "total_output_tokens": 5448,
+        "turn0_ttft_p50_ms": 138.1,
+        "turn0_ttft_p99_ms": 386.5,
+        "retry_ttft_p50_ms": 0.0,
+        "retry_ttft_p99_ms": 0.0,
+        "tpot_p50_ms": 40.9,
+        "tpot_p99_ms": 44.2,
+        "task_e2e_p50_ms": 4490.9,
+        "task_e2e_p99_ms": 9508.6
+      },
+      "turn1_1retry": {
+        "retry_budget": 1,
+        "syntax_valid_count": 44,
+        "syntax_valid_pct": 88.0,
+        "exec_match_count": 37,
+        "exec_accuracy_pct": 74.0,
+        "category_accuracy_pct": {
+          "filter_null": 100.0,
+          "join_having": 86.7,
+          "case_ratio": 50.0,
+          "window_cte": 60.0
+        },
+        "retried_tasks_count": 10,
+        "healed_tasks_count": 3,
+        "healed_examples": [
+          {
+            "id": "SQL15",
+            "turn0_reason": "lint_where_instead_of_having_max",
+            "turn0_sql": "SELECT \n    pd.pod_id, \n    gn.gpu_model, \n    MAX(it.kv_cache_usage_pct) AS max_kv_pct\nFROM \n    pod_deployments pd\nJOIN \n    gpu_nodes gn ON pd.node_id = gn.node_id\nJOIN \n    inf",
+            "healed_turn": 1,
+            "healed_sql": "SELECT \n    pd.pod_id, \n    gn.gpu_model, \n    MAX(it.kv_cache_usage_pct) AS max_kv_pct\nFROM \n    pod_deployments pd\nJOIN \n    gpu_nodes gn ON pd.node_id = gn.node_id\nJOIN \n    inf"
+          },
+          {
+            "id": "SQL19",
+            "turn0_reason": "sqlite_error: no such column: container_image",
+            "turn0_sql": "SELECT \n    container_image,\n    AVG(prefix_cache_hit_rate_pct) AS avg_hit_rate,\n    AVG(ttft_p50_ms) AS avg_ttft_p50\nFROM \n    inference_telemetry\nWHERE \n    active_concurrency >=",
+            "healed_turn": 1,
+            "healed_sql": "SELECT \n    pod_deployments.container_image,\n    AVG(inference_telemetry.prefix_cache_hit_rate_pct) AS avg_hit_rate,\n    AVG(inference_telemetry.ttft_p50_ms) AS avg_ttft_p50\nFROM \n"
+          },
+          {
+            "id": "SQL38",
+            "turn0_reason": "sqlite_error: misuse of aggregate function SUM()",
+            "turn0_sql": "SELECT o.org_name, SUM(pd.hourly_rate_usd) AS total_hourly_spend\nFROM organizations o\nJOIN pod_deployments pd ON o.org_id = pd.org_id\nGROUP BY o.org_id, o.org_name\nHAVING SUM(pd.ho",
+            "healed_turn": 1,
+            "healed_sql": "SELECT o.org_name, SUM(pd.hourly_rate_usd) AS total_hourly_spend\nFROM organizations o\nJOIN pod_deployments pd ON o.org_id = pd.org_id\nGROUP BY o.org_id, o.org_name\nHAVING SUM(pd.ho"
+          }
+        ],
+        "total_output_tokens": 7079,
+        "turn0_ttft_p50_ms": 138.1,
+        "turn0_ttft_p99_ms": 386.5,
+        "retry_ttft_p50_ms": 161.9,
+        "retry_ttft_p99_ms": 210.9,
+        "tpot_p50_ms": 40.8,
+        "tpot_p99_ms": 44.1,
+        "task_e2e_p50_ms": 4677.0,
+        "task_e2e_p99_ms": 17106.0
+      },
+      "turn2_2retries": {
+        "retry_budget": 2,
+        "syntax_valid_count": 45,
+        "syntax_valid_pct": 90.0,
+        "exec_match_count": 37,
+        "exec_accuracy_pct": 74.0,
+        "category_accuracy_pct": {
+          "filter_null": 100.0,
+          "join_having": 86.7,
+          "case_ratio": 50.0,
+          "window_cte": 60.0
+        },
+        "retried_tasks_count": 10,
+        "healed_tasks_count": 3,
+        "healed_examples": [
+          {
+            "id": "SQL15",
+            "turn0_reason": "lint_where_instead_of_having_max",
+            "turn0_sql": "SELECT \n    pd.pod_id, \n    gn.gpu_model, \n    MAX(it.kv_cache_usage_pct) AS max_kv_pct\nFROM \n    pod_deployments pd\nJOIN \n    gpu_nodes gn ON pd.node_id = gn.node_id\nJOIN \n    inf",
+            "healed_turn": 1,
+            "healed_sql": "SELECT \n    pd.pod_id, \n    gn.gpu_model, \n    MAX(it.kv_cache_usage_pct) AS max_kv_pct\nFROM \n    pod_deployments pd\nJOIN \n    gpu_nodes gn ON pd.node_id = gn.node_id\nJOIN \n    inf"
+          },
+          {
+            "id": "SQL19",
+            "turn0_reason": "sqlite_error: no such column: container_image",
+            "turn0_sql": "SELECT \n    container_image,\n    AVG(prefix_cache_hit_rate_pct) AS avg_hit_rate,\n    AVG(ttft_p50_ms) AS avg_ttft_p50\nFROM \n    inference_telemetry\nWHERE \n    active_concurrency >=",
+            "healed_turn": 1,
+            "healed_sql": "SELECT \n    pod_deployments.container_image,\n    AVG(inference_telemetry.prefix_cache_hit_rate_pct) AS avg_hit_rate,\n    AVG(inference_telemetry.ttft_p50_ms) AS avg_ttft_p50\nFROM \n"
+          },
+          {
+            "id": "SQL38",
+            "turn0_reason": "sqlite_error: misuse of aggregate function SUM()",
+            "turn0_sql": "SELECT o.org_name, SUM(pd.hourly_rate_usd) AS total_hourly_spend\nFROM organizations o\nJOIN pod_deployments pd ON o.org_id = pd.org_id\nGROUP BY o.org_id, o.org_name\nHAVING SUM(pd.ho",
+            "healed_turn": 1,
+            "healed_sql": "SELECT o.org_name, SUM(pd.hourly_rate_usd) AS total_hourly_spend\nFROM organizations o\nJOIN pod_deployments pd ON o.org_id = pd.org_id\nGROUP BY o.org_id, o.org_name\nHAVING SUM(pd.ho"
+          }
+        ],
+        "total_output_tokens": 8582,
+        "turn0_ttft_p50_ms": 138.1,
+        "turn0_ttft_p99_ms": 386.5,
+        "retry_ttft_p50_ms": 159.7,
+        "retry_ttft_p99_ms": 209.4,
+        "tpot_p50_ms": 40.7,
+        "tpot_p99_ms": 44.1,
+        "task_e2e_p50_ms": 4677.0,
+        "task_e2e_p99_ms": 30681.8
+      },
+      "remaining_failures": [
+        {
+          "id": "SQL14",
+          "final_turn": 2,
+          "eval_error": "mismatch (got 0 rows vs gt 8 rows)",
+          "verifier_reason": "empty_result_set",
+          "pred_sql": "SELECT DISTINCT t.pod_id, o.org_name\nFROM pod_deployments p\nJOIN organizations o ON p.org_id = o.org_id\nJOIN inference_telemetry t ON p.pod_id = t.pod_id\nWHERE p.deployment_type = 'serverless_worker'\n"
+        },
+        {
+          "id": "SQL22",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 4 rows vs gt 4 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT g.gpu_model, AVG(it.waiting_queue_depth) AS avg_wait_depth\nFROM gpu_nodes g\nJOIN pod_deployments pd ON g.node_id = pd.node_id\nJOIN inference_telemetry it ON pd.pod_id = it.pod_id\nWHERE it.activ"
+        },
+        {
+          "id": "SQL26",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 3 rows vs gt 3 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    deployment_type, \n    COUNT(*) AS total_pods, \n    CAST(SUM(CASE WHEN exit_code = 137 THEN 1 ELSE 0 END) AS REAL) * 100 / COUNT(*) AS oom_pct\nFROM \n    pod_deployments\nWHERE \n    terminate"
+        },
+        {
+          "id": "SQL27",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 4 rows vs gt 6 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    active_concurrency,\n    COUNT(*) AS total_snapshots,\n    100.0 * SUM(CASE WHEN ttft_p99_ms >= 800.0 OR tpot_p99_ms >= 45.0 THEN 1 ELSE 0 END) / COUNT(*) AS sla_violation_pct\nFROM \n    infe"
+        },
+        {
+          "id": "SQL29",
+          "final_turn": 1,
+          "eval_error": "mismatch (got 4 rows vs gt 4 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    gpu_nodes.datacenter_region,\n    COUNT(CASE WHEN inference_telemetry.kv_cache_usage_pct > 92.0 AND inference_telemetry.num_preemptions_delta > 0 THEN 1 END) AS pressure_count,\n    COUNT(*)"
+        },
+        {
+          "id": "SQL31",
+          "final_turn": 2,
+          "eval_error": "syntax: ambiguous column name: pod_id",
+          "verifier_reason": "sqlite_error: ambiguous column name: pod_id",
+          "pred_sql": "SELECT \n    pd.prefix_caching_enabled, \n    AVG(it.prefix_cache_hit_rate_pct) AS avg_hit_rate, \n    AVG(it.ttft_p50_ms) AS avg_ttft_p50\nFROM (\n    SELECT \n        pod_id, \n        deployment_type = 'o"
+        },
+        {
+          "id": "SQL33",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 4 rows vs gt 4 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    gpu_model, \n    COUNT(*) AS queued_snapshots, \n    100.0 * COUNT(*) / SUM(COUNT(*)) OVER () AS queuing_pct\nFROM \n    inference_telemetry IT\nJOIN \n    pod_deployments PD ON IT.pod_id = PD.p"
+        },
+        {
+          "id": "SQL36",
+          "final_turn": 2,
+          "eval_error": "syntax: misuse of window function DENSE_RANK()",
+          "verifier_reason": "sqlite_error: misuse of window function DENSE_RANK()",
+          "pred_sql": "SELECT \n    o.tier,\n    o.org_name,\n    SUM(id.tokens_generated_delta) AS total_tokens,\n    DENSE_RANK() OVER (PARTITION BY o.tier ORDER BY SUM(id.tokens_generated_delta) DESC) AS tier_rank\nFROM \n    "
+        },
+        {
+          "id": "SQL39",
+          "final_turn": 2,
+          "eval_error": "syntax: no such column: id.tokens_generated_delta",
+          "verifier_reason": "sqlite_error: no such column: id.tokens_generated_delta",
+          "pred_sql": "SELECT \n    g.datacenter_region,\n    100.0 * SUM(CASE WHEN g.datacenter_region IS NOT NULL THEN COALESCE(id.tokens_generated_delta, 0) ELSE 0 END) OVER () AS region_tokens,\n    100.0 * SUM(CASE WHEN g"
+        },
+        {
+          "id": "SQL40",
+          "final_turn": 2,
+          "eval_error": "syntax: no such column: gpu_model",
+          "verifier_reason": "sqlite_error: no such column: gpu_model",
+          "pred_sql": "SELECT \n    it.pod_id, \n    gn.gpu_model, \n    AVG(it.tpot_p99_ms) AS pod_avg_tpot, \n    AVG(it2.tpot_p99_ms) AS model_avg_tpot\nFROM \n    inference_telemetry it\nJOIN \n    pod_deployments pd ON it.pod_"
+        }
+      ]
+    },
+    {
+      "status": "ok",
+      "label": "Qwen2.5-14B-AWQ (W4A16 + FP16 KV)",
+      "model": "Qwen/Qwen2.5-14B-Instruct-AWQ",
+      "kv_cache_dtype": "auto",
+      "extra_args": [],
+      "gpu": "NVIDIA L4",
+      "gpu_mem_util": 0.85,
+      "max_model_len": 4096,
+      "concurrency": 16,
+      "kv_cache_gib": 8.87,
+      "kv_cache_tokens": 46592,
+      "max_conc_4k": 11.38,
+      "total_tasks": 50,
+      "wall_time_s": 41.09,
+      "overall_throughput_tok_per_s": 167.91,
+      "turn0_0shot": {
+        "retry_budget": 0,
+        "syntax_valid_count": 46,
+        "syntax_valid_pct": 92.0,
+        "exec_match_count": 38,
+        "exec_accuracy_pct": 76.0,
+        "category_accuracy_pct": {
+          "filter_null": 100.0,
+          "join_having": 86.7,
+          "case_ratio": 70.0,
+          "window_cte": 53.3
+        },
+        "retried_tasks_count": 0,
+        "healed_tasks_count": 0,
+        "healed_examples": [],
+        "total_output_tokens": 5846,
+        "turn0_ttft_p50_ms": 225.2,
+        "turn0_ttft_p99_ms": 1072.1,
+        "retry_ttft_p50_ms": 0.0,
+        "retry_ttft_p99_ms": 0.0,
+        "tpot_p50_ms": 59.9,
+        "tpot_p99_ms": 69.2,
+        "task_e2e_p50_ms": 7006.4,
+        "task_e2e_p99_ms": 14339.0
+      },
+      "turn1_1retry": {
+        "retry_budget": 1,
+        "syntax_valid_count": 49,
+        "syntax_valid_pct": 98.0,
+        "exec_match_count": 39,
+        "exec_accuracy_pct": 78.0,
+        "category_accuracy_pct": {
+          "filter_null": 100.0,
+          "join_having": 86.7,
+          "case_ratio": 70.0,
+          "window_cte": 60.0
+        },
+        "retried_tasks_count": 5,
+        "healed_tasks_count": 1,
+        "healed_examples": [
+          {
+            "id": "SQL37",
+            "turn0_reason": "sqlite_error: no such column: pt.pod_id",
+            "turn0_sql": "WITH RankedTelemetry AS (\n    SELECT\n        gn.gpu_model,\n        pt.pod_id,\n        pt.ttft_p99_ms,\n        pt.active_concurrency,\n        ROW_NUMBER() OVER (PARTITION BY gn.gpu_",
+            "healed_turn": 1,
+            "healed_sql": "WITH RankedTelemetry AS (\n    SELECT\n        gn.gpu_model,\n        it.pod_id,\n        it.ttft_p99_ms,\n        it.active_concurrency,\n        ROW_NUMBER() OVER (PARTITION BY gn.gpu_"
+          }
+        ],
+        "total_output_tokens": 6722,
+        "turn0_ttft_p50_ms": 225.2,
+        "turn0_ttft_p99_ms": 1072.1,
+        "retry_ttft_p50_ms": 272.1,
+        "retry_ttft_p99_ms": 281.4,
+        "tpot_p50_ms": 59.9,
+        "tpot_p99_ms": 68.6,
+        "task_e2e_p50_ms": 7006.4,
+        "task_e2e_p99_ms": 25139.7
+      },
+      "turn2_2retries": {
+        "retry_budget": 2,
+        "syntax_valid_count": 50,
+        "syntax_valid_pct": 100.0,
+        "exec_match_count": 39,
+        "exec_accuracy_pct": 78.0,
+        "category_accuracy_pct": {
+          "filter_null": 100.0,
+          "join_having": 86.7,
+          "case_ratio": 70.0,
+          "window_cte": 60.0
+        },
+        "retried_tasks_count": 5,
+        "healed_tasks_count": 1,
+        "healed_examples": [
+          {
+            "id": "SQL37",
+            "turn0_reason": "sqlite_error: no such column: pt.pod_id",
+            "turn0_sql": "WITH RankedTelemetry AS (\n    SELECT\n        gn.gpu_model,\n        pt.pod_id,\n        pt.ttft_p99_ms,\n        pt.active_concurrency,\n        ROW_NUMBER() OVER (PARTITION BY gn.gpu_",
+            "healed_turn": 1,
+            "healed_sql": "WITH RankedTelemetry AS (\n    SELECT\n        gn.gpu_model,\n        it.pod_id,\n        it.ttft_p99_ms,\n        it.active_concurrency,\n        ROW_NUMBER() OVER (PARTITION BY gn.gpu_"
+          }
+        ],
+        "total_output_tokens": 6899,
+        "turn0_ttft_p50_ms": 225.2,
+        "turn0_ttft_p99_ms": 1072.1,
+        "retry_ttft_p50_ms": 267.3,
+        "retry_ttft_p99_ms": 281.3,
+        "tpot_p50_ms": 59.9,
+        "tpot_p99_ms": 68.4,
+        "task_e2e_p50_ms": 7006.4,
+        "task_e2e_p99_ms": 30078.3
+      },
+      "remaining_failures": [
+        {
+          "id": "SQL14",
+          "final_turn": 1,
+          "eval_error": "mismatch (got 4 rows vs gt 8 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT DISTINCT p.pod_id, o.org_name\nFROM pod_deployments AS p\nJOIN organizations AS o ON p.org_id = o.org_id\nWHERE p.deployment_type = 'serverless_worker'\nAND p.terminated_at IS NULL\nAND EXISTS (\n   "
+        },
+        {
+          "id": "SQL24",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 5 rows vs gt 5 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    pod_id, \n    COUNT(telemetry_id) AS record_count, \n    AVG(tpot_p99_ms) AS avg_ttft_p99\nFROM \n    inference_telemetry\nGROUP BY \n    pod_id\nHAVING \n    COUNT(telemetry_id) >= 3\nORDER BY \n  "
+        },
+        {
+          "id": "SQL26",
+          "final_turn": 1,
+          "eval_error": "mismatch (got 1 rows vs gt 3 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    deployment_type,\n    total_pods,\n    (100.0 * oom_count / total_pods) AS oom_pct\nFROM (\n    SELECT \n        deployment_type,\n        COUNT(*) AS total_pods,\n        SUM(CASE WHEN terminati"
+        },
+        {
+          "id": "SQL27",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 5 rows vs gt 6 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    active_concurrency,\n    COUNT(*) AS total_snapshots,\n    100.0 * SUM(CASE WHEN ttft_p99_ms >= 800.0 OR tpot_p99_ms >= 45.0 THEN 1 ELSE 0 END) / COUNT(*) AS sla_violation_pct\nFROM \n    infe"
+        },
+        {
+          "id": "SQL33",
+          "final_turn": 2,
+          "eval_error": "mismatch (got 12 rows vs gt 4 rows)",
+          "verifier_reason": "lint_where_filters_denominator_in_case_ratio",
+          "pred_sql": "SELECT \n    g.gpu_model,\n    q.queued_snapshots,\n    q.queuing_pct\nFROM \n    gpu_nodes g\nJOIN (\n    SELECT \n        pd.node_id,\n        COUNT(*) AS queued_snapshots,\n        100.0 * COUNT(*) / SUM(CAS"
+        },
+        {
+          "id": "SQL39",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 4 rows vs gt 4 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    datacenter_region,\n    SUM(tokens_generated_delta) AS region_tokens,\n    100.0 * SUM(tokens_generated_delta) OVER () / SUM(tokens_generated_delta) AS pct_share\nFROM \n    inference_telemetr"
+        },
+        {
+          "id": "SQL40",
+          "final_turn": 1,
+          "eval_error": "mismatch (got 10 rows vs gt 10 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    pd.pod_id, \n    gn.gpu_model, \n    p.pod_avg_tpot, \n    m.model_avg_tpot\nFROM \n    pod_deployments pd\nJOIN \n    gpu_nodes gn ON pd.node_id = gn.node_id\nJOIN (\n    SELECT \n        pd.pod_id"
+        },
+        {
+          "id": "SQL41",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 24 rows vs gt 20 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT pd.pod_id, it.recorded_at, it.kv_cache_usage_pct\nFROM pod_deployments pd\nJOIN (\n    SELECT pod_id, MAX(telemetry_id) AS max_telemetry_id\n    FROM inference_telemetry\n    WHERE kv_cache_usage_pc"
+        },
+        {
+          "id": "SQL42",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 4 rows vs gt 4 rows)",
+          "verifier_reason": null,
+          "pred_sql": "WITH telemetry_data AS (\n    SELECT \n        pd.node_id,\n        pd.org_id,\n        pd.pod_id,\n        g.gpu_model,\n        SUM(it.tokens_generated_delta) AS total_tokens,\n        SUM(pd.hourly_rate_u"
+        },
+        {
+          "id": "SQL45",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 6 rows vs gt 6 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    recorded_at, \n    SUM(tokens_generated_delta) OVER (ORDER BY recorded_at ASC) AS batch_tokens,\n    SUM(tokens_generated_delta) OVER (ORDER BY recorded_at ASC ROWS BETWEEN UNBOUNDED PRECEDI"
+        }
+      ]
+    },
+    {
+      "status": "ok",
+      "label": "Qwen2.5-32B-AWQ (W4A16 + FP16 KV, Tight 24GB L4)",
+      "model": "Qwen/Qwen2.5-32B-Instruct-AWQ",
+      "kv_cache_dtype": "auto",
+      "extra_args": [],
+      "gpu": "NVIDIA L4",
+      "gpu_mem_util": 0.92,
+      "max_model_len": 4096,
+      "concurrency": 16,
+      "kv_cache_gib": 1.54,
+      "kv_cache_tokens": 4608,
+      "max_conc_4k": 1.12,
+      "total_tasks": 50,
+      "wall_time_s": 52.8,
+      "overall_throughput_tok_per_s": 113.87,
+      "turn0_0shot": {
+        "retry_budget": 0,
+        "syntax_valid_count": 48,
+        "syntax_valid_pct": 96.0,
+        "exec_match_count": 46,
+        "exec_accuracy_pct": 92.0,
+        "category_accuracy_pct": {
+          "filter_null": 100.0,
+          "join_having": 93.3,
+          "case_ratio": 90.0,
+          "window_cte": 86.7
+        },
+        "retried_tasks_count": 0,
+        "healed_tasks_count": 0,
+        "healed_examples": [],
+        "total_output_tokens": 5750,
+        "turn0_ttft_p50_ms": 813.9,
+        "turn0_ttft_p99_ms": 2735.5,
+        "retry_ttft_p50_ms": 0.0,
+        "retry_ttft_p99_ms": 0.0,
+        "tpot_p50_ms": 109.6,
+        "tpot_p99_ms": 120.9,
+        "task_e2e_p50_ms": 13125.2,
+        "task_e2e_p99_ms": 24733.1
+      },
+      "turn1_1retry": {
+        "retry_budget": 1,
+        "syntax_valid_count": 50,
+        "syntax_valid_pct": 100.0,
+        "exec_match_count": 47,
+        "exec_accuracy_pct": 94.0,
+        "category_accuracy_pct": {
+          "filter_null": 100.0,
+          "join_having": 100.0,
+          "case_ratio": 90.0,
+          "window_cte": 86.7
+        },
+        "retried_tasks_count": 2,
+        "healed_tasks_count": 1,
+        "healed_examples": [
+          {
+            "id": "SQL19",
+            "turn0_reason": "sqlite_error: no such column: it.tfft_p50_ms",
+            "turn0_sql": "SELECT \n    pd.container_image, \n    AVG(it.prefix_cache_hit_rate_pct) AS avg_hit_rate, \n    AVG(it.tfft_p50_ms) AS avg_ttft_p50 \nFROM \n    pod_deployments pd \nJOIN \n    inference_",
+            "healed_turn": 1,
+            "healed_sql": "SELECT \n    pd.container_image, \n    AVG(it.prefix_cache_hit_rate_pct) AS avg_hit_rate, \n    AVG(it.ttft_p50_ms) AS avg_ttft_p50 \nFROM \n    pod_deployments pd \nJOIN \n    inference_"
+          }
+        ],
+        "total_output_tokens": 6012,
+        "turn0_ttft_p50_ms": 813.9,
+        "turn0_ttft_p99_ms": 2735.5,
+        "retry_ttft_p50_ms": 945.3,
+        "retry_ttft_p99_ms": 953.7,
+        "tpot_p50_ms": 109.6,
+        "tpot_p99_ms": 120.9,
+        "task_e2e_p50_ms": 13308.8,
+        "task_e2e_p99_ms": 30081.0
+      },
+      "turn2_2retries": {
+        "retry_budget": 1,
+        "syntax_valid_count": 50,
+        "syntax_valid_pct": 100.0,
+        "exec_match_count": 47,
+        "exec_accuracy_pct": 94.0,
+        "category_accuracy_pct": {
+          "filter_null": 100.0,
+          "join_having": 100.0,
+          "case_ratio": 90.0,
+          "window_cte": 86.7
+        },
+        "retried_tasks_count": 2,
+        "healed_tasks_count": 1,
+        "healed_examples": [
+          {
+            "id": "SQL19",
+            "turn0_reason": "sqlite_error: no such column: it.tfft_p50_ms",
+            "turn0_sql": "SELECT \n    pd.container_image, \n    AVG(it.prefix_cache_hit_rate_pct) AS avg_hit_rate, \n    AVG(it.tfft_p50_ms) AS avg_ttft_p50 \nFROM \n    pod_deployments pd \nJOIN \n    inference_",
+            "healed_turn": 1,
+            "healed_sql": "SELECT \n    pd.container_image, \n    AVG(it.prefix_cache_hit_rate_pct) AS avg_hit_rate, \n    AVG(it.ttft_p50_ms) AS avg_ttft_p50 \nFROM \n    pod_deployments pd \nJOIN \n    inference_"
+          }
+        ],
+        "total_output_tokens": 6012,
+        "turn0_ttft_p50_ms": 813.9,
+        "turn0_ttft_p99_ms": 2735.5,
+        "retry_ttft_p50_ms": 945.3,
+        "retry_ttft_p99_ms": 953.7,
+        "tpot_p50_ms": 109.6,
+        "tpot_p99_ms": 120.9,
+        "task_e2e_p50_ms": 13308.8,
+        "task_e2e_p99_ms": 30081.0
+      },
+      "remaining_failures": [
+        {
+          "id": "SQL31",
+          "final_turn": 1,
+          "eval_error": "mismatch (got 2 rows vs gt 2 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    CAST(json_extract(pd.vllm_args, '$.enable_prefix_caching') AS INTEGER) AS prefix_caching_enabled,\n    AVG(it.prefix_cache_hit_rate_pct) AS avg_hit_rate,\n    AVG(it.ttft_p50_ms) AS avg_ttft"
+        },
+        {
+          "id": "SQL39",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 4 rows vs gt 4 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT \n    datacenter_region, \n    SUM(tokens_generated_delta) AS region_tokens,\n    100.0 * SUM(tokens_generated_delta) / SUM(tokens_generated_delta) OVER () AS pct_share\nFROM \n    inference_telemet"
+        },
+        {
+          "id": "SQL41",
+          "final_turn": 0,
+          "eval_error": "mismatch (got 24 rows vs gt 20 rows)",
+          "verifier_reason": null,
+          "pred_sql": "SELECT pod_id, recorded_at, kv_cache_usage_pct\nFROM (\n    SELECT \n        t.pod_id, \n        t.recorded_at, \n        t.kv_cache_usage_pct,\n        ROW_NUMBER() OVER (PARTITION BY t.pod_id ORDER BY t.r"
+        }
+      ]
+    }
+  ]
+}

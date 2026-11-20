@@ -153,3 +153,51 @@ python research-vllm-benchmark/plot_accuracy_ablation.py \
   research-vllm-benchmark/results_sql_accuracy_l4.json \
   research-vllm-benchmark/charts
 ```
+
+---
+
+## 6. Part 3: Single L4 (24GB) Production Architecture — W8A8 FP8 Linear Rescue, Zero-Oracle SQLite Self-Healing, and the 32B-AWQ KV Cache Cliff
+
+Part 2 left two critical production questions open for teams running on a single **NVIDIA L4 (24GB, Ada Lovelace SM 8.9)**:
+1. **Why did `--kv-cache-dtype fp8` collapse to 0% valid SQL, and how do you safely use L4's native Ada FP8 Tensor Cores?**
+2. **To lift SQL execution accuracy from `60%` toward `75%–94%` on a single 24GB L4, should you add a Zero-Oracle SQLite Self-Healing Loop (`7B` + Prefix-Cached compiler retries) or squeeze a larger `14B-AWQ` / `32B-AWQ` model onto the card?**
+
+To answer both, I built [sql_self_healing_eval.py](sql_self_healing_eval.py) with a **Zero-Oracle SQLite Verifier** (`zero_oracle_sqlite_verifier()`, which never reads ground-truth SQL and triggers retries strictly on production-observable signals: `sqlite3.Error`, empty result sets, all-`NULL` aggregates, and static `WHERE`-on-aggregate lint hazards) and benchmarked 4 setups at concurrency `c=16` on `NVIDIA L4 (24GB)` (raw JSON: [results_l4_part3_suite.json](results_l4_part3_suite.json)):
+
+![Single L4 Self-Healing & W8A8 FP8 vs 32B-AWQ KV Cache Cliff](charts/chart_l4_self_healing_and_w8a8.png)
+
+### 6.1 Empirical Results on a Single NVIDIA L4 (24GB, `vLLM 0.34.0`, `c=16`, Prefix Caching Enabled)
+
+| Setup on 1x NVIDIA L4 (24GB) | Free KV Cache Pool (`Max Conc @ 4k`) | 0-Shot Syntax / Exec Acc | +1 Retry Syntax / Exec Acc | +2 Retries Syntax / Exec Acc | Turn-0 TTFT P50 (ms) | Retry TTFT P50 (ms) | Decode TPOT P99 (ms) |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| **`Qwen2.5-7B-AWQ` (`W4A16 + FP16 KV`)** | **`235,520 tok`** (`12.93 GiB`, `57.5x`) | `80.0%` / `60.0%` | `86.0%` / `66.0%` | **`90.0%` / `66.0%`** | **`113.6`** | **`144.3`** | **`40.6` (PASS)** |
+| **`Qwen2.5-7B-FP8` (`--quantization fp8`, `W8A8 Linear + FP16 KV`)** | **`178,176 tok`** (`9.91 GiB`, `43.5x`) | `82.0%` / **`68.0%`** | `88.0%` / **`74.0%`** | **`90.0%` / `74.0%`** | **`138.1`** | **`161.9`** | **`44.2` (PASS)** |
+| **`Qwen2.5-14B-AWQ` (`W4A16 + FP16 KV`)** | `46,592 tok` (`8.87 GiB`, `11.4x`) | `92.0%` / `76.0%` | `98.0%` / `78.0%` | **`100.0%` / `78.0%`** | `225.2` | `272.1` | `69.2` (FAIL) |
+| **`Qwen2.5-32B-AWQ` (`W4A16 + FP16 KV`, `util=0.92`)** | **`4,608 tok`** (`1.54 GiB`, **`1.12x`**) | `96.0%` / `92.0%` | **`100.0%` / `94.0%`** | **`100.0%` / `94.0%`** | **`813.9`** *(7.2x)* | **`945.3`** | **`120.9` (FAIL)** |
+
+### 6.2 Key Architectural Findings from Part 3
+
+1. **W8A8 Linear FP8 (`--quantization fp8`) vs. Uncalibrated FP8 KV Cache (`--kv-cache-dtype fp8`)**:
+   - Engineers often conflate `--quantization fp8` (W8A8 weight + dynamic per-token activation quantization on Ada FP8 Tensor Cores) with `--kv-cache-dtype fp8` (quantizing Attention Key/Value cache tensors).
+   - On `Qwen2.5-7B-Instruct`, enabling **`--quantization fp8` while keeping `--kv-cache-dtype auto` (FP16 KV)** works out-of-the-box without calibration datasets: it expands the free KV cache pool **2.64x** vs BF16 (`67,584 → 178,176 tokens`), brings **TPOT P99 down from `65.3 ms` to `44.2 ms`** (inside the `<45 ms` interactive SLA), and achieves **`68.0%` 0-shot execution accuracy** (rising to **`74.0%` execution accuracy / `90.0%` valid SQL** with 1 Zero-Oracle self-healing retry).
+   - Why does `--quantization fp8` succeed where `--kv-cache-dtype fp8` collapsed to `0.0%`? Because linear projections use per-channel weight scales and dynamic per-token activation scales, whereas uncalibrated `--kv-cache-dtype fp8` clamps pre-RoPE attention Key channels (which contain extreme outlier spikes in Qwen2.5) without per-head KV scaling factors.
+2. **Prefix Caching Makes Multi-Turn Agent Self-Healing Almost Free in Prefill Latency**:
+   - Feeding SQLite compiler tracebacks (`no such column`, `misuse of aggregate`, or `0-row` join warnings) back to `7B-FP8 (W8A8)` healed 3 failed queries in 1 retry (`68.0% → 74.0%` execution accuracy, nearly matching `14B-AWQ` 0-shot `76.0%` while maintaining **3.8x more KV cache capacity** and meeting the `45 ms` TPOT SLA).
+   - Even though Turn-1 retry prompts are ~2,100 tokens long (`1,800-token schema + question + failed SQL + compiler traceback`), **Retry TTFT P50 is only `144.3 ms` (`7B-AWQ`) / `161.9 ms` (`7B-FP8`)** at `c=16` because the first ~1,950 tokens hit vLLM's Prefix Cache 100%.
+3. **The "32B-on-24GB-L4 Trap" (`4,608-Token` KV Cache Cliff)**:
+   - Squeezing `Qwen2.5-32B-Instruct-AWQ` (`~18.5 GiB` weights) onto a single 24GB L4 (`--gpu-memory-utilization 0.92`) achieves **`92.0%` (0-shot) / `94.0%` (1-retry) execution accuracy (`100.0%` valid SQL)**.
+   - However, it leaves only **`1.54 GiB` (`4,608 tokens`, `1.12x @ 4k`)** for the KV cache pool. At concurrency `c=16`, sequences cannot coexist in VRAM—forcing vLLM to queue and preempt requests, which spikes **TTFT P50 7.2x (`113.6 ms → 813.9 ms`, P99 `2,735.5 ms`)** and pushes **TPOT P99 to `120.9 ms`** (`2.7x` above the `45 ms` SLA).
+   - **Rule of thumb for L4 sizing**: Use `32B-AWQ` on a single 24GB L4 only for low-concurrency batch/internal BI (`c=1..2`); for interactive concurrency (`c=16+`), run `7B-FP8 (W8A8)` or `7B-AWQ` with a Prefix-Cached compiler feedback loop, or move `32B-AWQ` to a 48GB+ GPU.
+
+### Reproducing Part 3
+
+```bash
+# 1. Validate the Zero-Oracle SQLite Verifier locally (confirms 0/50 false-positive triggers on ground truth)
+python research-vllm-benchmark/sql_self_healing_eval.py --validate-local
+
+# 2. Run the 4-model Self-Healing & W8A8 FP8 suite on an NVIDIA L4 (24GB)
+python research-vllm-benchmark/sql_self_healing_eval.py --run-suite --concurrency 16 --out research-vllm-benchmark/results_l4_part3_suite.json
+
+# 3. Generate the Part 3 dual-panel comparison chart
+python research-vllm-benchmark/plot_self_healing_part3.py
+```

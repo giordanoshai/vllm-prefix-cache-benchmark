@@ -180,3 +180,60 @@ The real surprise was uncalibrated --kv-cache-dtype fp8 on Qwen2.5-7B: on BOTH L
 
 Just wrote up the full L4 vs Blackwell breakdown and verifier repo if you'd like to compare notes!
 ```
+
+---
+
+## Option 4: Part 3 Follow-Up Post (Single 24GB L4: How to Actually Use FP8 + 7B Self-Healing Loop vs. Squeezing 32B-AWQ)
+
+### LinkedIn Post (Short & Punchy — Yimin Signature Style)
+*(Attach `charts/chart_l4_self_healing_and_w8a8.png`)*
+
+```text
+In Part 2, uncalibrated FP8 KV cache (--kv-cache-dtype fp8) on Qwen2.5-7B dropped our 50-task SQLite accuracy to 0%.
+
+That left two practical questions for teams running on a single NVIDIA L4 (24GB):
+1. How do you actually use L4's native FP8 Tensor Cores without breaking output quality?
+2. To push SQL accuracy from 60% toward 75–94%, should you add a SQLite compiler retry loop on 7B, or squeeze a larger 14B/32B AWQ model onto the 24GB card?
+
+I ran a 4-model benchmark on an NVIDIA L4 (vLLM 0.34.0, c=16, prefix caching enabled) with a zero-oracle SQLite verifier that feeds compiler errors back for 1–2 retries:
+
+1. W8A8 Linear FP8 works; uncalibrated FP8 KV cache does not:
+Using --quantization fp8 with FP16 KV cache (W8A8 linear weights + dynamic per-token activations) expanded the KV pool 2.64x over BF16 (67.6K → 178.2K tokens), kept TPOT P99 at 44.2ms (<45ms SLA), and hit 68% 0-shot execution accuracy.
+
+2. Prefix caching makes agent self-healing retries almost free:
+With just 1 SQLite compiler retry, 7B-FP8 (W8A8) jumped from 68% → 74% execution accuracy (90% valid SQL), nearly matching 14B-AWQ 0-shot (76%) while keeping 3.8x more KV cache capacity. Even with a 2,100-token retry prompt, Retry TTFT P50 was only 162ms because the 1,800-token schema prefix hit cache 100%.
+
+3. The 32B-on-24GB-L4 KV cache cliff:
+Squeezing Qwen2.5-32B-AWQ onto a single 24GB L4 (--gpu-memory-utilization 0.92) hit 92% 0-shot and 94% 1-retry accuracy (100% valid SQL) — but left only 1.54 GiB (4,608 tokens, 1.12x @ 4k) for KV cache. At c=16, queuing and preemption spiked TTFT P50 7.2x (114ms → 814ms) and pushed TPOT P99 to 120.9ms.
+
+Takeaway for L4 sizing:
+• Interactive concurrency (c=16+): 7B-FP8 (W8A8) or 7B-AWQ + 1 prefix-cached compiler retry stays under the 45ms TPOT SLA.
+• Low-concurrency batch BI (c=1..2): 32B-AWQ on a single 24GB L4 gives 94% SQL execution accuracy for ~$0.44/hr.
+
+Code, zero-oracle SQLite verifier & raw L4 JSON logs: https://github.com/giordanoshai/vllm-prefix-cache-benchmark
+
+#vLLM #LLMInference #GPU #AIInfrastructure #SQL #AIAgents
+```
+
+### X (Twitter) Version (Main Post + Self-Reply with Link)
+
+**Tweet 1 (Attach `charts/chart_l4_self_healing_and_w8a8.png`, NO external link in Tweet 1):**
+```text
+In Part 2, uncalibrated --kv-cache-dtype fp8 on Qwen2.5-7B dropped our 50-task SQLite accuracy to 0%.
+
+So on a single 24GB NVIDIA L4 (@vllm_project 0.34.0, c=16), I tested:
+1) How to safely use L4's native FP8 Tensor Cores
+2) 7B + zero-oracle SQLite compiler retry loop vs squeezing 14B/32B-AWQ onto 24GB VRAM.
+
+3 findings:
+• --quantization fp8 (W8A8 linear FP8 + FP16 KV) works out of the box: 2.64x larger KV pool vs BF16 (178.2K tok), 44.2ms TPOT P99, and 68% 0-shot accuracy (vs 0% on uncalibrated FP8 KV).
+• Adding 1 SQLite compiler retry lifted 7B-FP8 from 68% → 74% accuracy (90% valid SQL), nearly matching 14B-AWQ 0-shot (76%). Retry TTFT P50 was only 162ms thanks to prefix caching.
+• 32B-AWQ fits on a 24GB L4 and hits 92% → 94% accuracy (100% valid SQL), BUT leaves only 4,608 KV tokens (1.12x @ 4k). At c=16, queuing spikes TTFT P50 7.2x (814ms) and TPOT P99 to 120.9ms. 👇
+```
+
+**Tweet 2 (Reply to Tweet 1 with the GitHub link):**
+```text
+Zero-oracle SQLite self-healing benchmark, raw L4 JSON telemetry, and plotting scripts:
+https://github.com/giordanoshai/vllm-prefix-cache-benchmark
+```
+
